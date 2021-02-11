@@ -1,0 +1,207 @@
+package jellyfish
+
+import (
+	"crypto/sha256"
+	"go-jellyfish-merkletree/common"
+)
+
+type Version uint64
+
+type NodeKey struct {
+	Vs Version
+	np NibblePath
+}
+
+type Child struct {
+	Hash   common.HashValue
+	Vs     Version
+	isLeaf bool
+}
+
+// [`Children`] is just a collection of children belonging to a [`InternalNode`], indexed from 0 to
+// 15, inclusive.
+type Children map[Nibble]Child
+
+type InternalNode struct {
+	children Children
+}
+
+type LeafNode struct {
+	AccountKey common.HashValue
+	ValueHash common.HashValue
+	Value interface{}
+}
+
+func createLiteralHash(word string) common.HashValue{
+	var res common.HashValue
+	res = common.BytesToHash([]byte(word))
+	return res
+}
+
+// Generates a child node key based on this node key.
+func (nk *NodeKey) genChildNodeKey(v Version, n Nibble) NodeKey {
+	nodeNibblePath := nk.np
+	nodeNibblePath.push(n)
+	return NodeKey{v, nodeNibblePath}
+}
+
+// Generates parent node key at the same Vs based on this node key.
+func (nk *NodeKey) genParentNodeKey() NodeKey {
+	nodeNibblePath := nk.np
+	if nodeNibblePath.NumNibbles == 1 {
+		panic("Current node key is root")
+	}
+	_, _ = nodeNibblePath.pop()
+	return NodeKey{nk.Vs, nodeNibblePath}
+}
+
+func (nk *NodeKey) Encode() {
+
+}
+
+func (nk *NodeKey) Decode() {
+
+}
+
+func (internal *InternalNode) new(children Children) InternalNode {
+	if len(children) == 0 {
+		panic("Children is empty")
+	}
+	if len(children) == 1 {
+		for _, value := range children {
+			if value.isLeaf {
+				panic("Child can't be a leaf node")
+			}
+		}
+	}
+	return InternalNode{children}
+}
+
+func (internal *InternalNode) hash() {
+
+}
+
+func (internal *InternalNode) serialize() {
+
+}
+
+func (internal *InternalNode) deserialize() {
+
+}
+
+// Gets the `n`-th child.
+func (internal *InternalNode) child(n Nibble) Child {
+	return internal.children[n]
+}
+
+// Generates `existence_bitmap` and `leaf_bitmap` as a pair of `u16`s: child at index `i`
+// exists if `existence_bitmap[i]` is set; child at index `i` is leaf node if
+// `leaf_bitmap[i]` is set.
+func (internal *InternalNode) generateBitmaps() (uint16, uint16) {
+	var existenceBitmap uint16
+	var leafBitmap uint16
+	for nibble, child := range internal.children {
+		existenceBitmap |= 1 << nibble
+		if child.isLeaf {
+			leafBitmap |= 1 << nibble
+		}
+	}
+	if existenceBitmap|leafBitmap != existenceBitmap {
+		panic("GenerateBitmaps error")
+	}
+	return existenceBitmap, leafBitmap
+}
+
+// Given a range [start, start + width), returns the sub-bitmap of that range.
+// height 0 with width 1
+// TODO: assert
+func (internal *InternalNode) rangeBitmaps(start uint8, width uint8, existenceBitmap uint16, leafBitmap uint16) (uint16, uint16) {
+	if start >= 16 || width > 16 {
+		panic("Start out of range")
+	}
+	var mask uint16
+	if width == 16 {
+		mask = 0xffff
+	} else {
+		mask = (1 << width) - 1
+	}
+	mask <<= start
+	return existenceBitmap & mask, leafBitmap & mask
+}
+
+// TODO: understand
+func (internal *InternalNode) merkleHash(start uint8, width uint8, existenceBitmap uint16, leafBitmap uint16) common.HashValue {
+	var res common.HashValue
+	rangeExistenceBitmap, rangeLeafBitmap := internal.rangeBitmaps(start, width, existenceBitmap, leafBitmap)
+	if rangeExistenceBitmap == 0 {
+		res = common.BytesToHash([]byte("SPARSE_MERKLE_PLACEHOLDER_HASH"))
+		// Only 1 leaf child under this subtree or reach the lowest level??
+	}else if common.CountOnes(rangeExistenceBitmap) == 1 && (rangeLeafBitmap != 0 || width == 1) {
+		onlyChildIndex := Nibble(common.TrailingZeros(rangeExistenceBitmap))
+		res = internal.child(onlyChildIndex).Hash
+	}else {
+		leftChild := internal.merkleHash(start, width/2, existenceBitmap, leafBitmap)
+		rightChild := internal.merkleHash(start+width/2, width/2, existenceBitmap, leafBitmap)
+		res = common.SparseMerkleInternalNode{LeftNode: leftChild, RightNode: rightChild}.Hash()
+	}
+	return res
+}
+
+/// Gets the child and its corresponding siblings that are necessary to generate the proof for
+/// the `n`-th child. If it is an existence proof, the returned child must be the `n`-th
+/// child; otherwise, the returned child may be another child. See inline explanation for
+/// details. When calling this function with n = 11 (node `b` in the following graph), the
+/// range at each level is illustrated as a pair of square brackets:
+///
+/// ```text
+///     4      [f   e   d   c   b   a   9   8   7   6   5   4   3   2   1   0] -> root level
+///            ---------------------------------------------------------------
+///     3      [f   e   d   c   b   a   9   8] [7   6   5   4   3   2   1   0] width = 8
+///                                  chs <--┘                        shs <--┘
+///     2      [f   e   d   c] [b   a   9   8] [7   6   5   4] [3   2   1   0] width = 4
+///                  shs <--┘               └--> chs
+///     1      [f   e] [d   c] [b   a] [9   8] [7   6] [5   4] [3   2] [1   0] width = 2
+///                          chs <--┘       └--> shs
+///     0      [f] [e] [d] [c] [b] [a] [9] [8] [7] [6] [5] [4] [3] [2] [1] [0] width = 1
+///     ^                chs <--┘   └--> shs
+///     |   MSB|<---------------------- uint 16 ---------------------------->|LSB
+///  height    chs: `child_half_start`         shs: `sibling_half_start`
+/// ```
+func (internal *InternalNode) getChildWithSiblings(nodeKey NodeKey, n Nibble) (NodeKey, []common.HashValue) {
+	var siblings []common.HashValue
+	existenceBitmap, leafBitmap := internal.generateBitmaps()
+	for h:=uint8(0); h<4; h++ {
+		width := uint8(1 << h)
+		childHalfStart, siblingHalfStart := GetChildAndSiblingHalfStart(n, h)
+		siblings = append(siblings, internal.merkleHash(siblingHalfStart, width, existenceBitmap, leafBitmap))
+	    rangeExistenceBitmap, rangeLeafBitmap := internal.rangeBitmaps(childHalfStart, width, existenceBitmap, leafBitmap)
+	    if rangeExistenceBitmap == 0{
+	    	return NodeKey{}, siblings
+		}else if common.CountOnes(rangeExistenceBitmap) == 1 && (common.CountOnes(rangeLeafBitmap) == 1 || width == 1){
+			onlyChildIndex := uint8(common.TrailingZeros(rangeExistenceBitmap))
+			onlyChildVersion := internal.child(onlyChildIndex).Vs
+			return nodeKey.genChildNodeKey(onlyChildVersion, onlyChildIndex), siblings
+		}
+	}
+	return NodeKey{}, nil // unreached
+}
+
+func GetChildAndSiblingHalfStart(n Nibble, height uint8) (uint8, uint8) {
+	childHalfStart := (0xff << height) & n
+	siblingHalfStart := childHalfStart ^ (1 << height)
+	return childHalfStart, siblingHalfStart
+}
+
+func (lf *LeafNode)new(accountKey common.HashValue, value interface{}) LeafNode {
+	valueHash := sha256.Sum256(value.([]byte))
+	return LeafNode{accountKey, valueHash, value}
+}
+
+func (lf *LeafNode)hash() common.HashValue {
+	return common.SparseMerkleLeafNode{lf.AccountKey, lf.ValueHash}.Hash()
+}
+
+
+
+
+
