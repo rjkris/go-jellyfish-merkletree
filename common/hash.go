@@ -1,8 +1,12 @@
 package common
 
-import "crypto/sha256"
+import (
+	"crypto/sha256"
+	mapset "github.com/deckarep/golang-set"
+)
 
 const HashLength int = 32
+const RootNibbleHeight int = HashLength*2
 
 type HashValue [HashLength]byte
 
@@ -54,9 +58,42 @@ func BytesToHash(b []byte) HashValue {
 }
 
 func CountOnes(u uint16) int{
-	return 7
+	var count int
+	for i:=0; i<16; i++ {
+		count += int(u) & 1
+		u >>= 1
+	}
+	return count
 }
 
 func TrailingZeros(u uint16) int{
-	return 7
+	var count int
+	for i:=0; i<16; i++ {
+		if u & 1 == 1 {
+			break
+		} else {
+			u >>= 1
+			count += 1
+		}
+	}
+	return count
+}
+
+// TODO: DEBUG
+func LeadingZeros(u uint16) int{
+	var count int
+	var tmp = uint16(1 << 15)
+	for i:=0; i<16; i++ {
+		if u & tmp == 1 {
+			break
+		} else {
+			u <<= 1
+			count += 1
+		}
+	}
+	return count
+}
+
+func golangSetLen(s mapset.Set) {
+
 }

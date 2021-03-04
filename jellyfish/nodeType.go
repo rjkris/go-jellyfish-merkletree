@@ -7,6 +7,8 @@ import (
 
 type Version uint64
 
+const PreGenesisVersion Version = 1<<64-1
+
 type NodeKey struct {
 	Vs Version
 	np NibblePath
@@ -38,6 +40,9 @@ func createLiteralHash(word string) common.HashValue{
 	return res
 }
 
+func (nk *NodeKey)newEmptyPath(version Version) NodeKey {
+	return NodeKey{version, NibblePath{}.new([]uint8{})}
+}
 // Generates a child node key based on this node key.
 func (nk *NodeKey) genChildNodeKey(v Version, n Nibble) NodeKey {
 	nodeNibblePath := nk.np
@@ -77,8 +82,18 @@ func (internal *InternalNode) new(children Children) InternalNode {
 	return InternalNode{children}
 }
 
-func (internal *InternalNode) hash() {
 
+func (internal InternalNode)isLeaf() bool {
+	return false
+}
+
+func (internal InternalNode)newLeaf(accountK common.HashValue, value JfValue) Node {
+	return nil
+}
+
+func (internal InternalNode) hash() common.HashValue{
+	existenceBp, leafBp := internal.generateBitmaps()
+	return internal.merkleHash(0, 16, existenceBp, leafBp)
 }
 
 func (internal *InternalNode) serialize() {
@@ -167,7 +182,7 @@ func (internal *InternalNode) merkleHash(start uint8, width uint8, existenceBitm
 ///     |   MSB|<---------------------- uint 16 ---------------------------->|LSB
 ///  height    chs: `child_half_start`         shs: `sibling_half_start`
 /// ```
-func (internal *InternalNode) getChildWithSiblings(nodeKey NodeKey, n Nibble) (NodeKey, []common.HashValue) {
+func (internal *InternalNode) getChildWithSiblings(nodeKey NodeKey, n Nibble) (interface{}, []common.HashValue) {
 	var siblings []common.HashValue
 	existenceBitmap, leafBitmap := internal.generateBitmaps()
 	for h:=uint8(0); h<4; h++ {
@@ -176,14 +191,14 @@ func (internal *InternalNode) getChildWithSiblings(nodeKey NodeKey, n Nibble) (N
 		siblings = append(siblings, internal.merkleHash(siblingHalfStart, width, existenceBitmap, leafBitmap))
 	    rangeExistenceBitmap, rangeLeafBitmap := internal.rangeBitmaps(childHalfStart, width, existenceBitmap, leafBitmap)
 	    if rangeExistenceBitmap == 0{
-	    	return NodeKey{}, siblings
+	    	return nil, siblings
 		}else if common.CountOnes(rangeExistenceBitmap) == 1 && (common.CountOnes(rangeLeafBitmap) == 1 || width == 1){
 			onlyChildIndex := uint8(common.TrailingZeros(rangeExistenceBitmap))
 			onlyChildVersion := internal.child(onlyChildIndex).Vs
 			return nodeKey.genChildNodeKey(onlyChildVersion, onlyChildIndex), siblings
 		}
 	}
-	return NodeKey{}, nil // unreached
+	return nil, nil // unreached
 }
 
 func GetChildAndSiblingHalfStart(n Nibble, height uint8) (uint8, uint8) {
@@ -197,9 +212,28 @@ func (lf *LeafNode)new(accountKey common.HashValue, value interface{}) LeafNode 
 	return LeafNode{accountKey, valueHash, value}
 }
 
-func (lf *LeafNode)hash() common.HashValue {
+func (lf LeafNode)hash() common.HashValue {
 	return common.SparseMerkleLeafNode{lf.AccountKey, lf.ValueHash}.Hash()
 }
+
+func (lf LeafNode)newLeaf(accountk common.HashValue, value JfValue) Node {
+	return lf.new(accountk, value)
+}
+func (lf LeafNode)isLeaf() bool {
+	return true
+}
+
+// TODO 节点接口抽象 internal || leaf || nil
+type Node interface {
+	// newNone() Node
+	// newInternal(Children) Node
+	newLeaf(common.HashValue, JfValue) Node
+	isLeaf() bool
+	// encode() []uint8
+	hash() common.HashValue
+	// decode(*[]uint8) Node
+}
+
 
 
 

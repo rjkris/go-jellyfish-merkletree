@@ -1,19 +1,40 @@
 package jellyfish
 
-import "fmt"
+import (
+	"fmt"
+	"go-jellyfish-merkletree/common"
+)
 
 type NibblePath struct {
 	NumNibbles int
 	Bytes      []uint8
 }
 
+type BitIterator struct {
+	nibblePath NibblePath
+	start int
+	end int
+}
+
+type NibbleIterator struct {
+	nibblePath NibblePath
+	start int
+	cur int
+	end int
+}
+
+type interator interface {
+	peek() interface{}
+	next() interface{}
+}
+
 type Nibble = uint8
 
 // Creates a new `NibblePath` from a vector of Bytes assuming each byte has 2 nibbles.
-func (np *NibblePath) new(bytes []uint8) (NibblePath, error) {
+func (np *NibblePath) new(bytes []uint8) NibblePath {
 	// TODO: Bytes len check
 	numNibbles := len(bytes) * 2
-	return NibblePath{numNibbles, bytes}, nil
+	return NibblePath{numNibbles, bytes}
 }
 
 // NumNibbles is odd
@@ -92,10 +113,139 @@ func (np *NibblePath) getNibble(i int) Nibble {
 	}
 }
 
-func (np NibblePath) bits() {
-
+func (np NibblePath) bits() BitIterator{
+	if np.NumNibbles > common.RootNibbleHeight {
+		panic("out of range")
+	}
+	return BitIterator{np, 0, np.NumNibbles*4}
 }
 
-func (np *NibblePath) nibbles() {
-
+func (np *NibblePath) nibbles() NibbleIterator{
+	if np.NumNibbles > common.RootNibbleHeight {
+		panic("out of range")
+	}
+	return NibbleIterator{}.new(*np,0, np.NumNibbles)
 }
+
+func (bIter BitIterator)peek() interface{} {
+	if bIter.start < bIter.end {
+		return bIter.nibblePath.getBit(bIter.start)
+	}else {
+		return nil
+	}
+}
+
+func (bIter BitIterator)next() interface{} {
+	if bIter.start < bIter.end {
+		res := bIter.nibblePath.getBit(bIter.start)
+		bIter.start ++
+		return res
+	}else {
+		return nil
+	}
+}
+
+func (bIter *BitIterator)nextBack() interface{} {
+	if bIter.start < bIter.end {
+		res := bIter.nibblePath.getBit(bIter.end)
+		bIter.end --
+		return res
+	}else {
+		return nil
+	}
+}
+
+func (nIter NibbleIterator)next() interface{} {
+	if nIter.cur < nIter.end {
+		res := nIter.nibblePath.getNibble(nIter.cur)
+		nIter.cur ++
+		return res
+	}else {
+		return nil
+	}
+}
+
+func (nIter NibbleIterator)peek() interface{} {
+	if nIter.cur < nIter.end {
+		return nIter.nibblePath.getNibble(nIter.cur)
+	}else {
+		return nil
+	}
+}
+
+
+func (nIter *NibbleIterator)new(nibblePath NibblePath, start int, end int) NibbleIterator {
+	if start > end || start > common.RootNibbleHeight|| end > common.RootNibbleHeight{
+		panic("out of range")
+	}else {
+		return NibbleIterator{nibblePath, start, start, end}
+	}
+}
+
+// Returns a nibble iterator that iterates all visited nibbles.
+func (nIter *NibbleIterator)visitedNibbles() NibbleIterator {
+	if nIter.start > nIter.cur || nIter.cur > common.RootNibbleHeight {
+		panic("out of range")
+	}
+	return NibbleIterator{}.new(nIter.nibblePath, nIter.start, nIter.cur)
+}
+
+// Returns a nibble iterator that iterates all remaining nibbles.
+func (nIter *NibbleIterator)remainingNibbles() NibbleIterator {
+	if nIter.cur > nIter.end || nIter.end > common.RootNibbleHeight {
+		panic("out of range")
+	}
+	return NibbleIterator{}.new(nIter.nibblePath, nIter.cur, nIter.end)
+}
+
+func (nIter *NibbleIterator)bits() BitIterator {
+	if nIter.cur > nIter.end || nIter.end > common.RootNibbleHeight {
+		panic("out of range")
+	}
+	return BitIterator{nIter.nibblePath, nIter.start*4, nIter.end*4}
+}
+
+// TODO: UNDERSTAND CHAIN
+// get all nibblePath
+func (nIter *NibbleIterator)getNibblePath() NibblePath {
+	return nIter.nibblePath
+}
+
+// get nibblePath based end
+func (nIter *NibbleIterator)getPartNibblePath() NibblePath {
+	partNibblePath := NibblePath{}
+	for i:=nIter.start; i<nIter.end; i++ {
+		partNibblePath.push(nIter.nibblePath.getNibble(i))
+	}
+	return partNibblePath
+}
+
+// Get the number of nibbles that this iterator covers.
+func (nIter *NibbleIterator)numNibbles() uint {
+	if nIter.start > nIter.end {
+		panic("out of range")
+	}
+	return uint(nIter.end-nIter.start)
+}
+
+func (nIter *NibbleIterator)isFinished() bool {
+	return nIter.peek() == nil
+}
+
+/// Advance both iterators if their next nibbles are the same until either reaches the end or
+/// the find a mismatch. Return the number of matched nibbles.
+func SkipCommonPrefix(x interator, y interator) uint {
+	var count uint = 0
+	for {
+		xPeek := x.peek()
+		yPeek := y.peek()
+		if xPeek == nil || yPeek == nil || xPeek != yPeek {
+			break
+		}
+		count += 1
+		x.next()
+		y.next()
+	}
+	return count
+}
+
