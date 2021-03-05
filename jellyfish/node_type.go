@@ -34,20 +34,24 @@ type LeafNode struct {
 	Value interface{}
 }
 
+type NoneNode struct {
+
+}
+
 func createLiteralHash(word string) common.HashValue{
 	var res common.HashValue
 	res = common.BytesToHash([]byte(word))
 	return res
 }
 
-func (nk *NodeKey)newEmptyPath(version Version) NodeKey {
-	return NodeKey{version, NibblePath{}.new([]uint8{})}
+func (nk NodeKey)newEmptyPath(version Version) *NodeKey {
+	return &NodeKey{version, NibblePath{}.new([]uint8{})}
 }
 // Generates a child node key based on this node key.
-func (nk *NodeKey) genChildNodeKey(v Version, n Nibble) NodeKey {
+func (nk *NodeKey) genChildNodeKey(v Version, n Nibble) *NodeKey {
 	nodeNibblePath := nk.np
 	nodeNibblePath.push(n)
-	return NodeKey{v, nodeNibblePath}
+	return &NodeKey{v, nodeNibblePath}
 }
 
 // Generates parent node key at the same Vs based on this node key.
@@ -68,7 +72,7 @@ func (nk *NodeKey) Decode() {
 
 }
 
-func (internal *InternalNode) new(children Children) InternalNode {
+func (internal InternalNode) new(children Children) InternalNode {
 	if len(children) == 0 {
 		panic("Children is empty")
 	}
@@ -182,7 +186,7 @@ func (internal *InternalNode) merkleHash(start uint8, width uint8, existenceBitm
 ///     |   MSB|<---------------------- uint 16 ---------------------------->|LSB
 ///  height    chs: `child_half_start`         shs: `sibling_half_start`
 /// ```
-func (internal *InternalNode) getChildWithSiblings(nodeKey NodeKey, n Nibble) (interface{}, []common.HashValue) {
+func (internal *InternalNode) getChildWithSiblings(nodeKey *NodeKey, n Nibble) (interface{}, []common.HashValue) {
 	var siblings []common.HashValue
 	existenceBitmap, leafBitmap := internal.generateBitmaps()
 	for h:=uint8(0); h<4; h++ {
@@ -207,8 +211,8 @@ func GetChildAndSiblingHalfStart(n Nibble, height uint8) (uint8, uint8) {
 	return childHalfStart, siblingHalfStart
 }
 
-func (lf *LeafNode)new(accountKey common.HashValue, value interface{}) LeafNode {
-	valueHash := sha256.Sum256(value.([]byte))
+func (lf *LeafNode)new(accountKey common.HashValue, value JfValue) LeafNode {
+	valueHash := sha256.Sum256(value.getValue())
 	return LeafNode{accountKey, valueHash, value}
 }
 
@@ -221,6 +225,16 @@ func (lf LeafNode)newLeaf(accountk common.HashValue, value JfValue) Node {
 }
 func (lf LeafNode)isLeaf() bool {
 	return true
+}
+
+func (n NoneNode)hash() common.HashValue {
+	return common.BytesToHash([]byte("SPARSE_MERKLE_PLACEHOLDER_HASH"))
+}
+func (n NoneNode)newLeaf(key common.HashValue, value JfValue) Node {
+	return nil
+}
+func (n NoneNode)isLeaf() bool {
+	return false
 }
 
 // TODO 节点接口抽象 internal || leaf || nil

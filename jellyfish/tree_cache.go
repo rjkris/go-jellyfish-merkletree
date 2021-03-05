@@ -14,7 +14,7 @@ type FrozenTreeCache struct {
 }
 
 type TreeCache struct {
-	rootNodeKey NodeKey
+	rootNodeKey *NodeKey
 	nextVersion Version
 	nodeCache map[*NodeKey]Node
 	numNewLeaves uint
@@ -24,20 +24,25 @@ type TreeCache struct {
 	reader TreeReader
 }
 
-func (tc *TreeCache)new(reader TreeReader, nextVersion Version) TreeCache {
+func (tc TreeCache)new(reader TreeReader, nextVersion Version) TreeCache {
 	nodeCache := map[*NodeKey]Node{}
-	var rootNodeKey NodeKey
+	frozenNodeCache := FrozenTreeCache{
+		nodeCache: map[*NodeKey]Node{},
+	}
+	var rootNodeKey *NodeKey
 	// extreme case
 	if nextVersion == 0 {
 		preGenesisRootKey := NodeKey{}.newEmptyPath(PreGenesisVersion)
-		preGenesisRoot, _ := reader.getNode(&preGenesisRootKey)
+		preGenesisRoot, _ := reader.getNode(preGenesisRootKey)
 		_, ok := preGenesisRoot.(Node)
 		if ok {
 			rootNodeKey = preGenesisRootKey
 		}else {
+			fmt.Println("---------------------")
 			genesisRootKey := NodeKey{}.newEmptyPath(0)
-			nodeCache[&genesisRootKey] = nil  // TODO: 使用拷贝genesisRootKey
+			nodeCache[genesisRootKey] = NoneNode{}
 			rootNodeKey = genesisRootKey
+			fmt.Printf("genesisRootKey: %p \n", rootNodeKey)
 		}
 	}else {
 		rootNodeKey = NodeKey{}.newEmptyPath(nextVersion-1)
@@ -49,38 +54,44 @@ func (tc *TreeCache)new(reader TreeReader, nextVersion Version) TreeCache {
 		numNewLeaves:        0,
 		StaleNodeIndexCache: mapset.NewSet(),
 		numStaleLeaves:      0,
-		frozenCache:         FrozenTreeCache{},
+		frozenCache:         frozenNodeCache,
 		reader:              reader,
 	}
 }
 
-func (tc *TreeCache)getNode(nodeK *NodeKey) Node {
+func (tc *TreeCache)getNode(nodeK *NodeKey) interface{} {
+	fmt.Printf("nodeKey value: %p \n", nodeK)
+	fmt.Printf("treeCache value: %+v \n", tc)
 	if node, ok := tc.nodeCache[nodeK]; ok {
+		fmt.Println("111111111111")
 		return node
 	} else if node, ok := tc.frozenCache.nodeCache[nodeK]; ok {
+		fmt.Println("222222222222222")
 		return node
 	} else {
 		node, _ := tc.reader.getNode(nodeK)
-		return node.(Node)
+		fmt.Println("333333333333333")
+		return node
 	}
 }
 
 /// Puts the node with given hash as key into node_cache.
-func (tc *TreeCache)putNode(nodeK NodeKey, newNode Node) error {
-	_, ok := tc.nodeCache[&nodeK]
+func (tc *TreeCache)putNode(nodeK *NodeKey, newNode Node) error {
+	_, ok := tc.nodeCache[nodeK]
 	if ok {
 		return fmt.Errorf("node with %v already exists in NodeBatch", nodeK)
 	} else {
 		if newNode.isLeaf(){
 			tc.numNewLeaves += 1
 		}
-		tc.nodeCache[&nodeK] = newNode
+		tc.nodeCache[nodeK] = newNode
 	}
 	return nil
 }
 
 func (tc *TreeCache)deleteNode(oldNodeKey *NodeKey, isLeaf bool) {
 	if _, ok := tc.nodeCache[oldNodeKey]; ok == false {
+		fmt.Println("delenode false")
 		isNewEntry := tc.StaleNodeIndexCache.Add(oldNodeKey)  // TODO: CLONE
 		if isNewEntry == false {
 			panic("Node gets stale twice unexpectedly")
@@ -88,18 +99,22 @@ func (tc *TreeCache)deleteNode(oldNodeKey *NodeKey, isLeaf bool) {
 		if isLeaf == true {
 			tc.numStaleLeaves += 1
 		}
-	} else if isLeaf == true {
+		return
+	}
+	delete(tc.nodeCache, oldNodeKey)
+	if isLeaf == true {
 		tc.numStaleLeaves -= 1
 	}
 }
 
 // Freezes all the contents in cache to be immutable and clear `node_cache`.
 func (tc *TreeCache)freeze()  {
-	rootNode := tc.getNode(&tc.rootNodeKey)
-	if rootNode == nil {
-		panic("Root node must exit")
-	}
-	rootHash := rootNode.hash()
+	rootNode := tc.getNode(tc.rootNodeKey)
+	fmt.Printf("rootNode type: %T", rootNode)
+	//if rootNode ==  NoneNode{} {
+	//	panic("Root node must exit")
+	//}
+	rootHash := rootNode.(Node).hash()
 	tc.frozenCache.rootHashesList = append(tc.frozenCache.rootHashesList, rootHash)
     nodeStats := NodeStats{
 		NewNodes:    uint(len(tc.nodeCache)),
@@ -127,6 +142,7 @@ func (tc *TreeCache)freeze()  {
 }
 
 func (tc *TreeCache)into() ([]common.HashValue, TreeUpdateBatch) {
+	fmt.Printf("into value: %v \n", tc.frozenCache.rootHashesList)
 	return tc.frozenCache.rootHashesList, TreeUpdateBatch{
 		NodeBch:           tc.frozenCache.nodeCache,
 		StaleNodeIndexBch: tc.frozenCache.staleNodeIndexCache,

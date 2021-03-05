@@ -31,7 +31,7 @@ type interator interface {
 type Nibble = uint8
 
 // Creates a new `NibblePath` from a vector of Bytes assuming each byte has 2 nibbles.
-func (np *NibblePath) new(bytes []uint8) NibblePath {
+func (np NibblePath) new(bytes []uint8) NibblePath {
 	// TODO: Bytes len check
 	numNibbles := len(bytes) * 2
 	return NibblePath{numNibbles, bytes}
@@ -174,7 +174,7 @@ func (nIter NibbleIterator)peek() interface{} {
 }
 
 
-func (nIter *NibbleIterator)new(nibblePath NibblePath, start int, end int) NibbleIterator {
+func (nIter NibbleIterator)new(nibblePath NibblePath, start int, end int) NibbleIterator {
 	if start > end || start > common.RootNibbleHeight|| end > common.RootNibbleHeight{
 		panic("out of range")
 	}else {
@@ -212,7 +212,7 @@ func (nIter *NibbleIterator)getNibblePath() NibblePath {
 }
 
 // get nibblePath based end
-func (nIter *NibbleIterator)getPartNibblePath() NibblePath {
+func (nIter NibbleIterator)getPartNibblePath() NibblePath {
 	partNibblePath := NibblePath{}
 	for i:=nIter.start; i<nIter.end; i++ {
 		partNibblePath.push(nIter.nibblePath.getNibble(i))
@@ -221,7 +221,7 @@ func (nIter *NibbleIterator)getPartNibblePath() NibblePath {
 }
 
 // Get the number of nibbles that this iterator covers.
-func (nIter *NibbleIterator)numNibbles() uint {
+func (nIter NibbleIterator)numNibbles() uint {
 	if nIter.start > nIter.end {
 		panic("out of range")
 	}
