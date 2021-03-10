@@ -7,7 +7,7 @@ import (
 )
 
 type FrozenTreeCache struct {
-	nodeCache map[*NodeKey]Node
+	nodeCache map[NodeKey]Node
 	staleNodeIndexCache mapset.Set  // StaleNodeIndex
 	nodeStatsList []NodeStats
 	rootHashesList []common.HashValue
@@ -16,7 +16,7 @@ type FrozenTreeCache struct {
 type TreeCache struct {
 	rootNodeKey *NodeKey
 	nextVersion Version
-	nodeCache map[*NodeKey]Node
+	nodeCache map[NodeKey]Node
 	numNewLeaves uint
 	StaleNodeIndexCache mapset.Set  // NodeKey
 	numStaleLeaves uint
@@ -24,30 +24,31 @@ type TreeCache struct {
 	reader TreeReader
 }
 
-func (tc TreeCache)new(reader TreeReader, nextVersion Version) TreeCache {
-	nodeCache := map[*NodeKey]Node{}
+func (tc TreeCache)new(reader TreeReader, nextVersion Version) *TreeCache {
+	nodeCache := map[NodeKey]Node{}
 	frozenNodeCache := FrozenTreeCache{
-		nodeCache: map[*NodeKey]Node{},
+		nodeCache:           map[NodeKey]Node{},
+		staleNodeIndexCache: mapset.NewSet(),
 	}
 	var rootNodeKey *NodeKey
 	// extreme case
 	if nextVersion == 0 {
 		preGenesisRootKey := NodeKey{}.newEmptyPath(PreGenesisVersion)
-		preGenesisRoot, _ := reader.getNode(preGenesisRootKey)
+		preGenesisRoot := reader.getNode(preGenesisRootKey)
 		_, ok := preGenesisRoot.(Node)
 		if ok {
 			rootNodeKey = preGenesisRootKey
 		}else {
 			fmt.Println("---------------------")
 			genesisRootKey := NodeKey{}.newEmptyPath(0)
-			nodeCache[genesisRootKey] = NoneNode{}
+			nodeCache[*genesisRootKey] = NoneNode{}
 			rootNodeKey = genesisRootKey
 			fmt.Printf("genesisRootKey: %p \n", rootNodeKey)
 		}
 	}else {
 		rootNodeKey = NodeKey{}.newEmptyPath(nextVersion-1)
 	}
-	return TreeCache{
+	return &TreeCache{
 		rootNodeKey:         rootNodeKey,
 		nextVersion:         nextVersion,
 		nodeCache:           nodeCache,
@@ -62,14 +63,14 @@ func (tc TreeCache)new(reader TreeReader, nextVersion Version) TreeCache {
 func (tc *TreeCache)getNode(nodeK *NodeKey) interface{} {
 	fmt.Printf("nodeKey value: %p \n", nodeK)
 	fmt.Printf("treeCache value: %+v \n", tc)
-	if node, ok := tc.nodeCache[nodeK]; ok {
+	if node, ok := tc.nodeCache[*nodeK]; ok {
 		fmt.Println("111111111111")
 		return node
-	} else if node, ok := tc.frozenCache.nodeCache[nodeK]; ok {
+	} else if node, ok := tc.frozenCache.nodeCache[*nodeK]; ok {
 		fmt.Println("222222222222222")
 		return node
 	} else {
-		node, _ := tc.reader.getNode(nodeK)
+		node := tc.reader.getNode(nodeK)
 		fmt.Println("333333333333333")
 		return node
 	}
@@ -77,22 +78,25 @@ func (tc *TreeCache)getNode(nodeK *NodeKey) interface{} {
 
 /// Puts the node with given hash as key into node_cache.
 func (tc *TreeCache)putNode(nodeK *NodeKey, newNode Node) error {
-	_, ok := tc.nodeCache[nodeK]
+	_, ok := tc.nodeCache[*nodeK]
 	if ok {
 		return fmt.Errorf("node with %v already exists in NodeBatch", nodeK)
 	} else {
 		if newNode.isLeaf(){
 			tc.numNewLeaves += 1
 		}
-		tc.nodeCache[nodeK] = newNode
+		tc.nodeCache[*nodeK] = newNode
 	}
 	return nil
 }
 
 func (tc *TreeCache)deleteNode(oldNodeKey *NodeKey, isLeaf bool) {
-	if _, ok := tc.nodeCache[oldNodeKey]; ok == false {
+	// If node cache doesn't have this node, it means the node is in the previous version of
+	// the tree on the disk.
+	if _, ok := tc.nodeCache[*oldNodeKey]; ok == false {
 		fmt.Println("delenode false")
-		isNewEntry := tc.StaleNodeIndexCache.Add(oldNodeKey)  // TODO: CLONE
+		cloneOldNodeKey := *oldNodeKey
+		isNewEntry := tc.StaleNodeIndexCache.Add(cloneOldNodeKey)  // TODO: CLONE
 		if isNewEntry == false {
 			panic("Node gets stale twice unexpectedly")
 		}
@@ -101,7 +105,7 @@ func (tc *TreeCache)deleteNode(oldNodeKey *NodeKey, isLeaf bool) {
 		}
 		return
 	}
-	delete(tc.nodeCache, oldNodeKey)
+	delete(tc.nodeCache, *oldNodeKey)
 	if isLeaf == true {
 		tc.numStaleLeaves -= 1
 	}
@@ -126,16 +130,18 @@ func (tc *TreeCache)freeze()  {
 	for k, v := range tc.nodeCache {
 		tc.frozenCache.nodeCache[k] = v
 	}
-	tc.nodeCache = map[*NodeKey]Node{}
+	fmt.Printf("current frozencache: %+v \n", tc.frozenCache)
+	tc.nodeCache = map[NodeKey]Node{}
 	staleSinceVersion := tc.nextVersion
-	for item := range tc.StaleNodeIndexCache.Iterator().C {
+	for item := range tc.StaleNodeIndexCache.Iter() {
+		fmt.Println("iiiiiiiiiiiiii am iterrrrrrrrrr")
 		nodeK, _ := item.(NodeKey)
 		tc.frozenCache.staleNodeIndexCache.Add(StaleNodeIndex{
 			StaleSinceVersion: staleSinceVersion,
 			NodeK:             nodeK,
 		})
 	}
-	tc.StaleNodeIndexCache = mapset.NewSet()
+	//tc.StaleNodeIndexCache = mapset.NewSet()
 	tc.numStaleLeaves = 0
 	tc.numNewLeaves = 0
 	tc.nextVersion += 1

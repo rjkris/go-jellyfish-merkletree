@@ -31,21 +31,28 @@ func (h HashValue)Bytes() []byte {return h[:]}
 
 // SetBytes sets the hash to the value of b.
 // If b is larger than len(h), b will be cropped from the left.
-func (h *HashValue) SetBytes(b []byte) {
-	if len(b) > len(h) {
-		b = b[len(b)-HashLength:]
+func (h *HashValue) SetBytes(b [HashLength]byte) {
+	//if len(b) > len(h) {
+	//	b = b[len(b)-HashLength:]
+	//}
+	//copy(h[HashLength-len(b):], b)
+	for i, v := range b {
+		h[i] = v
 	}
-	copy(h[HashLength-len(b):], b)
 }
 
 func (h HashValue)Random() HashValue {
 	res := make([]byte, HashLength)
+	var resArray [HashLength]byte
 	rand.Seed(time.Now().UnixNano())
 	_, err := rand.Read(res)
 	if err != nil {
 		println(err)
 	}
-	h.SetBytes(res)
+	for i, v := range res {
+		resArray[i] = v
+	}
+	h.SetBytes(resArray)
 	return h
 }
 
@@ -53,7 +60,7 @@ func (s SparseMerkleInternalNode)Hash() HashValue {
 	var res HashValue
 	hashBytes := append(s.LeftNode.Bytes(), s.RightNode.Bytes()...)
 	hashes := sha256.Sum256(hashBytes)
-	res.SetBytes(hashes[:])
+	res.SetBytes(hashes)
 	return res
 }
 
@@ -61,13 +68,17 @@ func (s SparseMerkleLeafNode)Hash() HashValue {
 	var res HashValue
 	hashBytes := append(s.Key.Bytes(), s.ValueHash.Bytes()...)
 	hashes := sha256.Sum256(hashBytes)
-	res.SetBytes(hashes[:])
+	res.SetBytes(hashes)
 	return res
 }
 
 func BytesToHash(b []byte) HashValue {
 	var h HashValue
-	h.SetBytes(b)
+	var byteArray [HashLength]byte
+	for i, v := range b {
+		byteArray[i] = v
+	}
+	h.SetBytes(byteArray)
 	return h
 }
 

@@ -57,12 +57,19 @@ func main() {
 	println(dict[9])
 	fmt.Printf("%T", dict2[student{}])
 
-	sam := student{Name:"sam"}
-	tom := sam
+	sam := &student{Name:"sam"}
+	fmt.Printf("sam addr: %p \n",sam)
+	tom := *sam
+	fmt.Printf("tom addr: %p \n",&tom)
 	tom.Name = "tom"
 	fmt.Printf("%v", sam)
 
 	fmt.Println(common.LeadingZeros(128))
 	fmt.Println(common.TrailingZeros(2))
 	fmt.Println(1<<15)
+
+	fmt.Printf("hashvalue: %+v", common.HashValue{0x00})
+	var bigint int64
+	bigint = 1<<64-1
+	fmt.Println(bigint)
 }

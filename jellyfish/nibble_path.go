@@ -7,7 +7,7 @@ import (
 
 type NibblePath struct {
 	NumNibbles int
-	Bytes      []uint8
+	Bytes      [common.HashLength]uint8  // 切片不能比较做map的key
 }
 
 type BitIterator struct {
@@ -33,12 +33,19 @@ type Nibble = uint8
 // Creates a new `NibblePath` from a vector of Bytes assuming each byte has 2 nibbles.
 func (np NibblePath) new(bytes []uint8) NibblePath {
 	// TODO: Bytes len check
+	if len(bytes) > common.HashLength {
+		panic("bytes len too long")
+	}
 	numNibbles := len(bytes) * 2
-	return NibblePath{numNibbles, bytes}
+	var newBytes [common.HashLength]uint8
+	for i, v := range bytes {
+		newBytes[i] = v
+	}
+	return NibblePath{numNibbles, newBytes}
 }
 
 // NumNibbles is odd
-func (np *NibblePath) newOdd(bytes []uint8) (NibblePath, error) {
+func (np NibblePath) newOdd(bytes [common.HashLength]uint8) (NibblePath, error) {
 	// TODO: Bytes len check
 	if bytes[len(bytes)-1]&0x0f != 0 {
 		return NibblePath{}, fmt.Errorf("last nibble must be 0")
@@ -51,7 +58,8 @@ func (np *NibblePath) newOdd(bytes []uint8) (NibblePath, error) {
 func (np *NibblePath) push(nibble Nibble) {
 	// TODO: Bytes len check
 	if np.NumNibbles%2 == 0 {
-		np.Bytes = append(np.Bytes, nibble<<4)
+		//np.Bytes = append(np.Bytes, nibble<<4)
+		np.Bytes[np.NumNibbles/2] = nibble<<4
 	} else {
 		np.Bytes[np.NumNibbles/2] |= nibble
 	}
@@ -64,13 +72,15 @@ func (np *NibblePath) pop() (Nibble, error) {
 	if np.NumNibbles <= 0 {
 		return lastNibble, fmt.Errorf("nibblePath is empty")
 	}
-	l := len(np.Bytes)
+	//l := len(np.Bytes)
+	l := np.NumNibbles/2
 	if np.NumNibbles%2 == 0 {
+		l := np.NumNibbles/2
 		lastNibble = np.Bytes[l-1] & 0x0f
 		np.Bytes[l-1] &= 0xf0
 	} else {
-		lastNibble = np.Bytes[l-1] >> 4
-		np.Bytes = np.Bytes[:l-1]
+		lastNibble = np.Bytes[l] >> 4
+		np.Bytes[l] = 0
 	}
 	np.NumNibbles -= 1
 	return lastNibble, nil
@@ -82,10 +92,11 @@ func (np *NibblePath) last() (Nibble, error) {
 	if np.NumNibbles <= 0 {
 		return lastNibble, fmt.Errorf("nibblePath is empty")
 	}
-	lastByte := np.Bytes[len(np.Bytes)-1]
 	if np.NumNibbles%2 == 0 {
+		lastByte := np.Bytes[np.NumNibbles/2-1]
 		lastNibble = lastByte & 0x0f
 	} else {
+		lastByte := np.Bytes[np.NumNibbles/2]
 		lastNibble = lastByte >> 4
 	}
 	return lastNibble, nil
@@ -237,6 +248,7 @@ func (nIter *NibbleIterator)isFinished() bool {
 func SkipCommonPrefix(x interator, y interator) uint {
 	var count uint = 0
 	for {
+		fmt.Println("debugggg in skip")
 		xPeek := x.peek()
 		yPeek := y.peek()
 		if xPeek == nil || yPeek == nil || xPeek != yPeek {
