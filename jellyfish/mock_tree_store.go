@@ -8,15 +8,15 @@ type MockTreeStore struct {
 	allowOverwrite bool
 }
 
-func (mts MockTreeStore)new() MockTreeStore {
-	return MockTreeStore{
+func (mts MockTreeStore)new() *MockTreeStore {
+	return &MockTreeStore{
 		data:           map[NodeKey]Node{},
 		staleNode:      mapset.NewSet(),
 		allowOverwrite: false,
 	}
 }
-func (mts *MockTreeStore)getNode(nodeK *NodeKey) interface{} {
-	return mts.data[*nodeK]
+func (mts *MockTreeStore)getNode(nodeK NodeKey) interface{} {
+	return mts.data[nodeK]
 }
 
 func (mts *MockTreeStore)getRightMostLeaf() LeafNode {
@@ -47,6 +47,7 @@ func (mts *MockTreeStore)numNodes() int {
 	return len(mts.data)
 }
 
+// purge stale nodes
 func (mts *MockTreeStore)purgeStaleNodes(leastReadableVersion Version)  {
 	var toPurge []StaleNodeIndex
 	for item := range mts.staleNode.Iter() {

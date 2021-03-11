@@ -31,7 +31,7 @@ type interator interface {
 type Nibble = uint8
 
 // Creates a new `NibblePath` from a vector of Bytes assuming each byte has 2 nibbles.
-func (np NibblePath) new(bytes []uint8) NibblePath {
+func (np NibblePath) new(bytes []uint8) *NibblePath {
 	// TODO: Bytes len check
 	if len(bytes) > common.HashLength {
 		panic("bytes len too long")
@@ -41,21 +41,26 @@ func (np NibblePath) new(bytes []uint8) NibblePath {
 	for i, v := range bytes {
 		newBytes[i] = v
 	}
-	return NibblePath{numNibbles, newBytes}
+	return &NibblePath{numNibbles, newBytes}
 }
 
 // NumNibbles is odd
-func (np NibblePath) newOdd(bytes [common.HashLength]uint8) (NibblePath, error) {
+func (np NibblePath) newOdd(bytes []uint8) (*NibblePath, error) {
 	// TODO: Bytes len check
 	if bytes[len(bytes)-1]&0x0f != 0 {
-		return NibblePath{}, fmt.Errorf("last nibble must be 0")
+		return &NibblePath{}, fmt.Errorf("last nibble must be 0")
 	}
 	numNibbles := len(bytes)*2 - 1
-	return NibblePath{numNibbles, bytes}, nil
+	var bytesArray [common.HashLength]uint8
+	for i, v := range bytes {
+		bytesArray[i] = v
+	}
+	return &NibblePath{numNibbles, bytesArray}, nil
 }
 
 // Adds a nibble to the end of the nibble path
 func (np *NibblePath) push(nibble Nibble) {
+	fmt.Println("pushinggggggggg")
 	// TODO: Bytes len check
 	if np.NumNibbles%2 == 0 {
 		//np.Bytes = append(np.Bytes, nibble<<4)
@@ -75,7 +80,6 @@ func (np *NibblePath) pop() (Nibble, error) {
 	//l := len(np.Bytes)
 	l := np.NumNibbles/2
 	if np.NumNibbles%2 == 0 {
-		l := np.NumNibbles/2
 		lastNibble = np.Bytes[l-1] & 0x0f
 		np.Bytes[l-1] &= 0xf0
 	} else {
@@ -124,21 +128,21 @@ func (np *NibblePath) getNibble(i int) Nibble {
 	}
 }
 
-func (np NibblePath) bits() BitIterator{
+func (np *NibblePath) bits() *BitIterator{
 	if np.NumNibbles > common.RootNibbleHeight {
 		panic("out of range")
 	}
-	return BitIterator{np, 0, np.NumNibbles*4}
+	return &BitIterator{*np, 0, np.NumNibbles*4}
 }
 
-func (np *NibblePath) nibbles() NibbleIterator{
+func (np *NibblePath) nibbles() *NibbleIterator{
 	if np.NumNibbles > common.RootNibbleHeight {
 		panic("out of range")
 	}
 	return NibbleIterator{}.new(*np,0, np.NumNibbles)
 }
 
-func (bIter BitIterator)peek() interface{} {
+func (bIter *BitIterator)peek() interface{} {
 	if bIter.start < bIter.end {
 		return bIter.nibblePath.getBit(bIter.start)
 	}else {
@@ -146,7 +150,7 @@ func (bIter BitIterator)peek() interface{} {
 	}
 }
 
-func (bIter BitIterator)next() interface{} {
+func (bIter *BitIterator)next() interface{} {
 	if bIter.start < bIter.end {
 		res := bIter.nibblePath.getBit(bIter.start)
 		bIter.start ++
@@ -166,7 +170,7 @@ func (bIter *BitIterator)nextBack() interface{} {
 	}
 }
 
-func (nIter NibbleIterator)next() interface{} {
+func (nIter *NibbleIterator)next() interface{} {
 	if nIter.cur < nIter.end {
 		res := nIter.nibblePath.getNibble(nIter.cur)
 		nIter.cur ++
@@ -176,7 +180,7 @@ func (nIter NibbleIterator)next() interface{} {
 	}
 }
 
-func (nIter NibbleIterator)peek() interface{} {
+func (nIter *NibbleIterator)peek() interface{} {
 	if nIter.cur < nIter.end {
 		return nIter.nibblePath.getNibble(nIter.cur)
 	}else {
@@ -185,16 +189,16 @@ func (nIter NibbleIterator)peek() interface{} {
 }
 
 
-func (nIter NibbleIterator)new(nibblePath NibblePath, start int, end int) NibbleIterator {
+func (nIter NibbleIterator)new(nibblePath NibblePath, start int, end int) *NibbleIterator {
 	if start > end || start > common.RootNibbleHeight|| end > common.RootNibbleHeight{
 		panic("out of range")
 	}else {
-		return NibbleIterator{nibblePath, start, start, end}
+		return &NibbleIterator{nibblePath, start, start, end}
 	}
 }
 
 // Returns a nibble iterator that iterates all visited nibbles.
-func (nIter *NibbleIterator)visitedNibbles() NibbleIterator {
+func (nIter *NibbleIterator)visitedNibbles() *NibbleIterator {
 	if nIter.start > nIter.cur || nIter.cur > common.RootNibbleHeight {
 		panic("out of range")
 	}
@@ -202,7 +206,7 @@ func (nIter *NibbleIterator)visitedNibbles() NibbleIterator {
 }
 
 // Returns a nibble iterator that iterates all remaining nibbles.
-func (nIter *NibbleIterator)remainingNibbles() NibbleIterator {
+func (nIter *NibbleIterator)remainingNibbles() *NibbleIterator {
 	if nIter.cur > nIter.end || nIter.end > common.RootNibbleHeight {
 		panic("out of range")
 	}
@@ -223,16 +227,16 @@ func (nIter *NibbleIterator)getNibblePath() NibblePath {
 }
 
 // get nibblePath based end
-func (nIter NibbleIterator)getPartNibblePath() NibblePath {
+func (nIter *NibbleIterator)getPartNibblePath() NibblePath {
 	partNibblePath := NibblePath{}
 	for i:=nIter.start; i<nIter.end; i++ {
-		partNibblePath.push(nIter.nibblePath.getNibble(i))
+		(&partNibblePath).push(nIter.nibblePath.getNibble(i))
 	}
 	return partNibblePath
 }
 
 // Get the number of nibbles that this iterator covers.
-func (nIter NibbleIterator)numNibbles() uint {
+func (nIter *NibbleIterator)numNibbles() uint {
 	if nIter.start > nIter.end {
 		panic("out of range")
 	}

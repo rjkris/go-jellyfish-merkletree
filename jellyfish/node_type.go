@@ -45,12 +45,12 @@ func createLiteralHash(word string) common.HashValue{
 }
 
 func (nk NodeKey)newEmptyPath(version Version) *NodeKey {
-	return &NodeKey{version, NibblePath{}.new([]uint8{})}
+	return &NodeKey{version, *NibblePath{}.new([]uint8{})}
 }
 // Generates a child node key based on this node key.
 func (nk *NodeKey) genChildNodeKey(v Version, n Nibble) *NodeKey {
 	nodeNibblePath := nk.np
-	nodeNibblePath.push(n)
+	(&nodeNibblePath).push(n)
 	return &NodeKey{v, nodeNibblePath}
 }
 

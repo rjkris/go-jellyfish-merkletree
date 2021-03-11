@@ -34,7 +34,7 @@ func (tc TreeCache)new(reader TreeReader, nextVersion Version) *TreeCache {
 	// extreme case
 	if nextVersion == 0 {
 		preGenesisRootKey := NodeKey{}.newEmptyPath(PreGenesisVersion)
-		preGenesisRoot := reader.getNode(preGenesisRootKey)
+		preGenesisRoot := reader.getNode(*preGenesisRootKey)
 		_, ok := preGenesisRoot.(Node)
 		if ok {
 			rootNodeKey = preGenesisRootKey
@@ -70,7 +70,7 @@ func (tc *TreeCache)getNode(nodeK *NodeKey) interface{} {
 		fmt.Println("222222222222222")
 		return node
 	} else {
-		node := tc.reader.getNode(nodeK)
+		node := tc.reader.getNode(*nodeK)
 		fmt.Println("333333333333333")
 		return node
 	}

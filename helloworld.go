@@ -6,6 +6,9 @@ import (
 	"go-jellyfish-merkletree/common"
 )
 
+type cat struct {
+	name string
+}
 func main() {
 	fmt.Print("hello world")
 	list := []int{1}
@@ -70,6 +73,29 @@ func main() {
 
 	fmt.Printf("hashvalue: %+v", common.HashValue{0x00})
 	var bigint int64
-	bigint = 1<<64-1
+	//bigint = 1<<64-1
 	fmt.Println(bigint)
+
+	mimi2 := test1()
+	fmt.Printf("cat2 address: %p", &mimi2)
+
+	mimi := test2()
+	fmt.Printf("cat array2 address: %p", mimi)
+
+
+
+
+}
+
+func test1() cat {
+	var mimi cat
+	mimi = cat{"mimi"}
+	fmt.Printf("cat address: %p", &mimi)
+	return mimi
+}
+
+func test2() *map[int]cat {
+	res := map[int]cat{1: {"daju"}}
+	fmt.Printf("cat array address: %p", &res)
+	return &res
 }

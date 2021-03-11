@@ -7,7 +7,7 @@ import (
 )
 
 type TreeReader interface {
-	getNode(nodeKey *NodeKey) interface{}
+	getNode(nodeKey NodeKey) interface{}
 	getRightMostLeaf() LeafNode
 }
 
@@ -83,7 +83,7 @@ func (jf *JfMerkleTree)put(key common.HashValue, value JfValue, version Version,
 	rootNodeKey := treeCa.rootNodeKey
 	nibbleIter := nibblePath.nibbles()
 	//cloneRootNodeKey := rootNodeKey
-	newRootNodeKey, _ := jf.insertAt(rootNodeKey, version, &nibbleIter, value, treeCa)
+	newRootNodeKey, _ := jf.insertAt(rootNodeKey, version, nibbleIter, value, treeCa)
 	fmt.Printf("after insertAt: %+v \n", treeCa)
 	treeCa.rootNodeKey = newRootNodeKey
 	fmt.Printf("after update treeCa: %+v \n", treeCa)
@@ -268,8 +268,9 @@ func (jf *JfMerkleTree)getWithProof(key common.HashValue, version Version) (JfVa
 	nibblePath := NibblePath{}.new(key.Bytes())
 	nibbleIter := nibblePath.nibbles()
 	for nibbleDepth :=0; nibbleDepth <=common.RootNibbleHeight; nibbleDepth++ {
+		fmt.Printf("current nextNode: %+v \n", nextNodeKey)
 		fmt.Println("debugggggggggggggggggggggg")
-		nextNode := jf.reader.getNode(nextNodeKey)
+		nextNode := jf.reader.getNode(*nextNodeKey)
 		switch node := nextNode.(type) {
 		case InternalNode:
 			queriedChildIndex := nibbleIter.next()
@@ -277,6 +278,7 @@ func (jf *JfMerkleTree)getWithProof(key common.HashValue, version Version) (JfVa
 				panic("ran out of nibbles")
 			}
 			childNodeKey, siblingsInInternal := node.getChildWithSiblings(nextNodeKey, queriedChildIndex.(Nibble))
+			fmt.Printf("childnodekey: %+v \n", childNodeKey)
 			siblings = append(siblings, siblingsInInternal...)
 			if childNodeKey == nil  {
 				fmt.Println("proof111111111")
