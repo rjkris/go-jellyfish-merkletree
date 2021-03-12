@@ -3,7 +3,7 @@ package jellyfish
 import (
 	"fmt"
 	mapset "github.com/deckarep/golang-set"
-	"go-jellyfish-merkletree/common"
+	"github.com/rjkris/go-jellyfish-merkletree/common"
 )
 
 type TreeReader interface {
@@ -50,6 +50,12 @@ type JfMerkleTree struct {
 type valueSetItem struct {
 	hashK common.HashValue
 	value JfValue
+}
+
+
+func (jf *JfMerkleTree)treeGetValue(key common.HashValue, version Version) JfValue {
+	res, _ := jf.getWithProof(key, version)
+	return res
 }
 
 func (jf *JfMerkleTree)PutValueSet(valueSet []valueSetItem, version Version) (common.HashValue, TreeUpdateBatch) {

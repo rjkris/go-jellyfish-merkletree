@@ -2,7 +2,7 @@ package jellyfish
 
 import (
 	"crypto/sha256"
-	"go-jellyfish-merkletree/common"
+	"github.com/rjkris/go-jellyfish-merkletree/common"
 )
 
 type Version uint64

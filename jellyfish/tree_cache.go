@@ -3,7 +3,7 @@ package jellyfish
 import (
 	"fmt"
 	mapset "github.com/deckarep/golang-set"
-	"go-jellyfish-merkletree/common"
+	"github.com/rjkris/go-jellyfish-merkletree/common"
 )
 
 type FrozenTreeCache struct {

@@ -2,7 +2,7 @@ package jellyfish
 
 import (
 	"fmt"
-	"go-jellyfish-merkletree/common"
+	"github.com/rjkris/go-jellyfish-merkletree/common"
 )
 
 type NibblePath struct {

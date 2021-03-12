@@ -2,7 +2,7 @@ package jellyfish
 
 import (
 	"github.com/stretchr/testify/assert"
-	"go-jellyfish-merkletree/common"
+	"github.com/rjkris/go-jellyfish-merkletree/common"
 	"testing"
 )
 
@@ -171,4 +171,87 @@ func TestInsertAtLeafWithMultipleInternalsCreated(t *testing.T)  {
 	assert.Equal(t, 4, db.numNodes())
 	assert.Equal(t, value1, actual6)
 	assert.Equal(t, value2Update, actual7)
+}
+
+func TestBatchInsertion(t *testing.T)  {
+	key1 := common.HashValue{00}
+	value1 := valueT{[]byte{1}}
+
+	key2 := updateNibble(key1, 0, 2)
+	value2 := valueT{[]byte{2}}
+	value2Update := valueT{[]byte{22}}
+
+	key3 := updateNibble(key1, 1, 3)
+	value3 := valueT{[]byte{3}}
+
+	key4 := updateNibble(key1, 1, 4)
+	value4 := valueT{[]byte{4}}
+
+	key5 := updateNibble(key1, 5, 5)
+	value5 := valueT{[]byte{5}}
+
+	key6 := updateNibble(key1, 3, 6)
+	value6 := valueT{[]byte{6}}
+
+	var batches [][]valueSetItem
+	var oneBatch []valueSetItem
+	batches = append(batches, []valueSetItem{{key1, value1}})
+	batches = append(batches, []valueSetItem{{key2, value2}})
+	batches = append(batches, []valueSetItem{{key3, value3}})
+	batches = append(batches, []valueSetItem{{key4, value4}})
+	batches = append(batches, []valueSetItem{{key5, value5}})
+	batches = append(batches, []valueSetItem{{key6, value6}})
+	batches = append(batches, []valueSetItem{{key2, value2Update}})
+
+	t.Logf("batches len: %v", len(batches))
+	for i, item := range batches {
+		if i == 1 {
+			continue
+		}
+		oneBatch = append(oneBatch, item[0])
+	}
+	t.Logf("onebatch len: %v", len(oneBatch))
+
+	// insert as one batch
+    db := MockTreeStore{}.new()
+    tree := JfMerkleTree{
+		reader: db,
+		value:  nil,
+	}
+	_, batch := tree.PutValueSet(oneBatch, 0)
+	db.writeTreeUpdateBatch(batch)
+
+	assert.Equal(t, 12, db.numNodes())
+	for _, item := range oneBatch {
+		assert.Equal(t, item.value, tree.treeGetValue(item.hashK, 0))
+	}
+
+	// Insert in multiple batches.
+	db = MockTreeStore{}.new()
+	tree = JfMerkleTree{
+		reader: db,
+		value:  nil,
+	}
+	_, batch2 := tree.PutValueSets(batches, 0)
+	db.writeTreeUpdateBatch(batch2)
+
+	for _, item := range oneBatch {
+		assert.Equal(t, item.value, tree.treeGetValue(item.hashK, 6))
+	}
+	assert.Equal(t, 26, db.numNodes())
+	db.purgeStaleNodes(1)
+	assert.Equal(t, 25, db.numNodes())
+	db.purgeStaleNodes(2)
+	assert.Equal(t, 23, db.numNodes())
+	db.purgeStaleNodes(3)
+	assert.Equal(t, 21, db.numNodes())
+	db.purgeStaleNodes(4)
+	assert.Equal(t, 18, db.numNodes())
+	db.purgeStaleNodes(5)
+	assert.Equal(t, db.numNodes(), 14)
+	db.purgeStaleNodes(6)
+	assert.Equal(t, 12, db.numNodes())
+	for _, item := range oneBatch {
+		assert.Equal(t, item.value, tree.treeGetValue(item.hashK, 6))
+	}
 }

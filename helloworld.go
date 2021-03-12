@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	mapset "github.com/deckarep/golang-set"
-	"go-jellyfish-merkletree/common"
+	"github.com/rjkris/go-jellyfish-merkletree/common"
 )
 
 type cat struct {
@@ -86,10 +86,6 @@ func main() {
 	fmt.Printf("cats address: %p", cats)
 	cats2 := cats
 	fmt.Printf("cats2 address: %p", cats2)
-
-
-
-
 }
 
 func test1() cat {

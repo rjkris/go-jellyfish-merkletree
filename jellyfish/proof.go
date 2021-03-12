@@ -1,6 +1,6 @@
 package jellyfish
 
-import "go-jellyfish-merkletree/common"
+import "github.com/rjkris/go-jellyfish-merkletree/common"
 
 type SparseMerkleProof struct {
 	leaf LeafNode

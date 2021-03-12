@@ -1,4 +1,4 @@
-module go-jellyfish-merkletree
+module github.com/rjkris/go-jellyfish-merkletree
 
 go 1.13
 
