@@ -44,18 +44,18 @@ func createLiteralHash(word string) common.HashValue{
 	return res
 }
 
-func (nk NodeKey)newEmptyPath(version Version) *NodeKey {
-	return &NodeKey{version, *NibblePath{}.new([]uint8{})}
+func (nk NodeKey)newEmptyPath(version Version) NodeKey {
+	return NodeKey{version, *NibblePath{}.new([]uint8{})}
 }
 // Generates a child node key based on this node key.
-func (nk *NodeKey) genChildNodeKey(v Version, n Nibble) *NodeKey {
+func (nk NodeKey) genChildNodeKey(v Version, n Nibble) NodeKey {
 	nodeNibblePath := nk.np
 	(&nodeNibblePath).push(n)
-	return &NodeKey{v, nodeNibblePath}
+	return NodeKey{v, nodeNibblePath}
 }
 
 // Generates parent node key at the same Vs based on this node key.
-func (nk *NodeKey) genParentNodeKey() NodeKey {
+func (nk NodeKey) genParentNodeKey() NodeKey {
 	nodeNibblePath := nk.np
 	if nodeNibblePath.NumNibbles == 1 {
 		panic("Current node key is root")
@@ -64,11 +64,11 @@ func (nk *NodeKey) genParentNodeKey() NodeKey {
 	return NodeKey{nk.Vs, nodeNibblePath}
 }
 
-func (nk *NodeKey) Encode() {
+func (nk NodeKey) Encode() {
 
 }
 
-func (nk *NodeKey) Decode() {
+func (nk NodeKey) Decode() {
 
 }
 
@@ -186,7 +186,7 @@ func (internal *InternalNode) merkleHash(start uint8, width uint8, existenceBitm
 ///     |   MSB|<---------------------- uint 16 ---------------------------->|LSB
 ///  height    chs: `child_half_start`         shs: `sibling_half_start`
 /// ```
-func (internal *InternalNode) getChildWithSiblings(nodeKey *NodeKey, n Nibble) (interface{}, []common.HashValue) {
+func (internal *InternalNode) getChildWithSiblings(nodeKey NodeKey, n Nibble) (interface{}, []common.HashValue) {
 	var siblings []common.HashValue
 	existenceBitmap, leafBitmap := internal.generateBitmaps()
 	for h:=uint8(0); h<4; h++ {

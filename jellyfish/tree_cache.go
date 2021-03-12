@@ -14,7 +14,7 @@ type FrozenTreeCache struct {
 }
 
 type TreeCache struct {
-	rootNodeKey *NodeKey
+	rootNodeKey NodeKey
 	nextVersion Version
 	nodeCache map[NodeKey]Node
 	numNewLeaves uint
@@ -30,20 +30,20 @@ func (tc TreeCache)new(reader TreeReader, nextVersion Version) *TreeCache {
 		nodeCache:           map[NodeKey]Node{},
 		staleNodeIndexCache: mapset.NewSet(),
 	}
-	var rootNodeKey *NodeKey
+	var rootNodeKey NodeKey
 	// extreme case
 	if nextVersion == 0 {
 		preGenesisRootKey := NodeKey{}.newEmptyPath(PreGenesisVersion)
-		preGenesisRoot := reader.getNode(*preGenesisRootKey)
+		preGenesisRoot := reader.getNode(preGenesisRootKey)
 		_, ok := preGenesisRoot.(Node)
 		if ok {
 			rootNodeKey = preGenesisRootKey
 		}else {
 			fmt.Println("---------------------")
 			genesisRootKey := NodeKey{}.newEmptyPath(0)
-			nodeCache[*genesisRootKey] = NoneNode{}
+			nodeCache[genesisRootKey] = NoneNode{}
 			rootNodeKey = genesisRootKey
-			fmt.Printf("genesisRootKey: %p \n", rootNodeKey)
+			fmt.Printf("genesisRootKey: %v \n", rootNodeKey)
 		}
 	}else {
 		rootNodeKey = NodeKey{}.newEmptyPath(nextVersion-1)
@@ -60,42 +60,42 @@ func (tc TreeCache)new(reader TreeReader, nextVersion Version) *TreeCache {
 	}
 }
 
-func (tc *TreeCache)getNode(nodeK *NodeKey) interface{} {
-	fmt.Printf("nodeKey value: %p \n", nodeK)
+func (tc *TreeCache)getNode(nodeK NodeKey) interface{} {
+	fmt.Printf("nodeKey value: %v \n", nodeK)
 	fmt.Printf("treeCache value: %+v \n", tc)
-	if node, ok := tc.nodeCache[*nodeK]; ok {
+	if node, ok := tc.nodeCache[nodeK]; ok {
 		fmt.Println("111111111111")
 		return node
-	} else if node, ok := tc.frozenCache.nodeCache[*nodeK]; ok {
+	} else if node, ok := tc.frozenCache.nodeCache[nodeK]; ok {
 		fmt.Println("222222222222222")
 		return node
 	} else {
-		node := tc.reader.getNode(*nodeK)
+		node := tc.reader.getNode(nodeK)
 		fmt.Println("333333333333333")
 		return node
 	}
 }
 
 /// Puts the node with given hash as key into node_cache.
-func (tc *TreeCache)putNode(nodeK *NodeKey, newNode Node) error {
-	_, ok := tc.nodeCache[*nodeK]
+func (tc *TreeCache)putNode(nodeK NodeKey, newNode Node) error {
+	_, ok := tc.nodeCache[nodeK]
 	if ok {
 		return fmt.Errorf("node with %v already exists in NodeBatch", nodeK)
 	} else {
 		if newNode.isLeaf(){
 			tc.numNewLeaves += 1
 		}
-		tc.nodeCache[*nodeK] = newNode
+		tc.nodeCache[nodeK] = newNode
 	}
 	return nil
 }
 
-func (tc *TreeCache)deleteNode(oldNodeKey *NodeKey, isLeaf bool) {
+func (tc *TreeCache)deleteNode(oldNodeKey NodeKey, isLeaf bool) {
 	// If node cache doesn't have this node, it means the node is in the previous version of
 	// the tree on the disk.
-	if _, ok := tc.nodeCache[*oldNodeKey]; ok == false {
+	if _, ok := tc.nodeCache[oldNodeKey]; ok == false {
 		fmt.Println("delenode false")
-		cloneOldNodeKey := *oldNodeKey
+		cloneOldNodeKey := oldNodeKey
 		isNewEntry := tc.StaleNodeIndexCache.Add(cloneOldNodeKey)  // TODO: CLONE
 		if isNewEntry == false {
 			panic("Node gets stale twice unexpectedly")
@@ -105,7 +105,7 @@ func (tc *TreeCache)deleteNode(oldNodeKey *NodeKey, isLeaf bool) {
 		}
 		return
 	}
-	delete(tc.nodeCache, *oldNodeKey)
+	delete(tc.nodeCache, oldNodeKey)
 	if isLeaf == true {
 		tc.numStaleLeaves -= 1
 	}

@@ -94,7 +94,7 @@ func (jf *JfMerkleTree)put(key common.HashValue, value JfValue, version Version,
 /// [`NodeKey`](node_type/struct.NodeKey.html). Returns the newly inserted node.
 /// It is safe to use recursion here because the max depth is limited by the key length which
 /// for this tree is the length of the hash of account addresses.
-func (jf *JfMerkleTree)insertAt(nodeK *NodeKey, version Version, nibbleIter *NibbleIterator, value JfValue, treeCa *TreeCache) (*NodeKey, Node) {
+func (jf *JfMerkleTree)insertAt(nodeK NodeKey, version Version, nibbleIter *NibbleIterator, value JfValue, treeCa *TreeCache) (NodeKey, Node) {
 	fmt.Println("debuggggg insertAt")
 	node := treeCa.getNode(nodeK)
 	switch inode:= node.(type) {
@@ -114,11 +114,11 @@ func (jf *JfMerkleTree)insertAt(nodeK *NodeKey, version Version, nibbleIter *Nib
 		return jf.createLeafNode(NodeKey{}.newEmptyPath(version), nibbleIter, value, treeCa)
 	default:
 		panic("unknown node type")
-		return &NodeKey{}, nil
+		return NodeKey{}, nil
 	}
 }
 
-func (jf *JfMerkleTree)insertAtInternalNode(nodeK *NodeKey, node InternalNode, version Version, nibbleIter *NibbleIterator, value JfValue, treeCa *TreeCache) (*NodeKey, Node) {
+func (jf *JfMerkleTree)insertAtInternalNode(nodeK NodeKey, node InternalNode, version Version, nibbleIter *NibbleIterator, value JfValue, treeCa *TreeCache) (NodeKey, Node) {
 	// first delete and put in the end
 	treeCa.deleteNode(nodeK, false)
 	childIndex := nibbleIter.next()
@@ -135,7 +135,7 @@ func (jf *JfMerkleTree)insertAtInternalNode(nodeK *NodeKey, node InternalNode, v
 		_, newChildNode = jf.insertAt(childNodeKey, version, nibbleIter, value, treeCa)
 	}
 	// Reuse the current `InternalNode` in memory to create a new internal node.
-	children := node.children
+	children := ChildrenClone(node.children)  // can't children := common.childrenx
 	children[childIndex.(Nibble)] = Child{
 		Hash:   newChildNode.hash(),
 		Vs:     version,
@@ -150,7 +150,7 @@ func (jf *JfMerkleTree)insertAtInternalNode(nodeK *NodeKey, node InternalNode, v
 	return nodeK, newInternalNode
 }
 
-func (jf *JfMerkleTree)insertAtLeafNode(nodeK *NodeKey, existingLeafNode LeafNode, version Version, nibbleIter *NibbleIterator, value JfValue, treeCa *TreeCache) (*NodeKey, Node) {
+func (jf *JfMerkleTree)insertAtLeafNode(nodeK NodeKey, existingLeafNode LeafNode, version Version, nibbleIter *NibbleIterator, value JfValue, treeCa *TreeCache) (NodeKey, Node) {
 	fmt.Println("debugggggggg insertAtLeafNode")
 	treeCa.deleteNode(nodeK, true)
 	fmt.Println("deletenode finished")
@@ -204,7 +204,7 @@ func (jf *JfMerkleTree)insertAtLeafNode(nodeK *NodeKey, existingLeafNode LeafNod
 		Vs:     version,
 		isLeaf: true,
 	}
-	nodeK = &NodeKey{
+	nodeK = NodeKey{
 		Vs: version,
 		np: commonNibblePath,
 	}
@@ -229,7 +229,7 @@ func (jf *JfMerkleTree)insertAtLeafNode(nodeK *NodeKey, existingLeafNode LeafNod
 	for i :=0; i<int(numCommonNibblesBelowInternal); i++ {
 		fmt.Printf("debug forrrrrrrrrrrrrrr")
 		nibble, _ := commonNibblePath.pop()
-		nodeK = &NodeKey{
+		nodeK = NodeKey{
 			Vs: version,
 			np: commonNibblePath,
 		}
@@ -249,7 +249,7 @@ func (jf *JfMerkleTree)insertAtLeafNode(nodeK *NodeKey, existingLeafNode LeafNod
     return nodeK, nextInternalNode
 }
 
-func (jf *JfMerkleTree)createLeafNode(nodeK *NodeKey, nibbleIter *NibbleIterator, value JfValue, treeCa *TreeCache) (*NodeKey, Node) {
+func (jf *JfMerkleTree)createLeafNode(nodeK NodeKey, nibbleIter *NibbleIterator, value JfValue, treeCa *TreeCache) (NodeKey, Node) {
 	var newkey common.HashValue
 	// Get the underlying bytes of nibble_iter which must be a key, i.e., hashed account address
 	// with `HashValue::LENGTH` bytes.
@@ -270,7 +270,7 @@ func (jf *JfMerkleTree)getWithProof(key common.HashValue, version Version) (JfVa
 	for nibbleDepth :=0; nibbleDepth <=common.RootNibbleHeight; nibbleDepth++ {
 		fmt.Printf("current nextNode: %+v \n", nextNodeKey)
 		fmt.Println("debugggggggggggggggggggggg")
-		nextNode := jf.reader.getNode(*nextNodeKey)
+		nextNode := jf.reader.getNode(nextNodeKey)
 		switch node := nextNode.(type) {
 		case InternalNode:
 			queriedChildIndex := nibbleIter.next()
@@ -287,7 +287,7 @@ func (jf *JfMerkleTree)getWithProof(key common.HashValue, version Version) (JfVa
 					siblings: siblings,
 				}
 			} else {
-				nextNodeKey = childNodeKey.(*NodeKey)
+				nextNodeKey = childNodeKey.(NodeKey)
 			}
 		case LeafNode:
 			if node.AccountKey == key {
@@ -313,6 +313,14 @@ func (jf *JfMerkleTree)getWithProof(key common.HashValue, version Version) (JfVa
 	return nil, SparseMerkleProof{}
 }
 
+
+func ChildrenClone(children Children) Children {
+	newChildren := make(map[Nibble]Child)
+	for k, v := range children {
+		newChildren[k] = v
+	}
+	return newChildren
+}
 //
 //func (jf *JfMerkleTree)getRangeProof(rightmostKeyToProve common.HashValue, version Version) SparseMerkleProof {
 //	account, proof := jf.getWithProof(rightmostKeyToProve, version)

@@ -82,6 +82,11 @@ func main() {
 	mimi := test2()
 	fmt.Printf("cat array2 address: %p", mimi)
 
+	cats := map[int]cat{1: {"mimi"}}
+	fmt.Printf("cats address: %p", cats)
+	cats2 := cats
+	fmt.Printf("cats2 address: %p", cats2)
+
 
 
 
