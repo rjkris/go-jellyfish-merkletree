@@ -2,14 +2,13 @@ package common
 
 import (
 	"crypto/sha256"
-	mapset "github.com/deckarep/golang-set"
 	"math/rand"
 	"time"
 )
 
 const HashLength int = 32
 const RootNibbleHeight int = HashLength*2
-
+const LengthInBits int = HashLength*8
 
 type HashValue [HashLength]byte
 
@@ -55,6 +54,20 @@ func (h HashValue)Random() HashValue {
 	h.SetBytes(resArray)
 	return h
 }
+
+func (h HashValue)Bytes2Bits() []int {
+	res := make([]int, HashLength*32)
+	for i, v := range h {
+		for j:=0; j<8; j++ {
+			res[i*8+j] = int(v >> uint(7-j) & 0x01)
+		}
+	}
+	return res
+}
+
+//func (h HashValue)commonPrefixBitsLen(other HashValue) uint {
+//
+//}
 
 func (s SparseMerkleInternalNode)Hash() HashValue {
 	var res HashValue
@@ -119,6 +132,9 @@ func LeadingZeros(u uint16) int{
 	return count
 }
 
-func golangSetLen(s mapset.Set) {
-
+func Reverse(s []HashValue) []HashValue {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+	return s
 }

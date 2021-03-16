@@ -1,14 +1,10 @@
 package jellyfish
 
 import (
-	"github.com/stretchr/testify/assert"
 	"github.com/rjkris/go-jellyfish-merkletree/common"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
-
-type valueT struct {
-	value []byte
-}
 
 func updateNibble(originalKey common.HashValue, n uint, nibble uint8) common.HashValue {
 	var res common.HashValue
@@ -29,10 +25,6 @@ func updateNibble(originalKey common.HashValue, n uint, nibble uint8) common.Has
 	return res
 }
 
-func (v valueT)getValue() []byte {
-	return v.value
-}
-
 func TestJfMerkleTree_PutValueSet(t *testing.T) {
 	t.Logf("random value: %v", common.HashValue{}.Random())
 }
@@ -44,7 +36,7 @@ func TestInsertToEmptyTree(t *testing.T)  {
 		value:  nil,
 	}
 	key := common.HashValue{}.Random()
-	value := valueT{[]byte{43, 43, 67, 98}}
+	value := ValueT{[]byte{43, 43, 67, 98}}
 	testItem := valueSetItem{key, value}
 	newRootHash, batch := (&tree).PutValueSet([]valueSetItem{testItem}, 0)
 	assert.NotEmpty(t, batch)
@@ -65,7 +57,7 @@ func TestInsertToEmptyTree(t *testing.T)  {
 func TestInsertToPreGenesis(t *testing.T)  {
 	db := MockTreeStore{}.new()
 	key1 := common.HashValue{0x00}
-	value1 := valueT{[]byte{34, 45, 56, 67}}
+	value1 := ValueT{[]byte{34, 45, 56, 67}}
 	preGenesisRootKey := NodeKey{}.newEmptyPath(PreGenesisVersion)
 	db.putNode(preGenesisRootKey, LeafNode{}.newLeaf(key1, value1))
 
@@ -73,7 +65,7 @@ func TestInsertToPreGenesis(t *testing.T)  {
 	tree := JfMerkleTree{db, nil}
 	key2 := updateNibble(key1, 0, 15)
 	t.Logf("key2: %+v \n", key2)
-	value2 := valueT{[]byte{12, 23, 34, 45}}
+	value2 := ValueT{[]byte{12, 23, 34, 45}}
 	_, batch := tree.PutValueSet([]valueSetItem{{key2, value2}}, 0)
 	t.Logf("batch: %+v \n", batch)
 	assert.Equal(t, 1, batch.StaleNodeIndexBch.Cardinality())
@@ -99,7 +91,7 @@ func TestInsertAtLeafWithMultipleInternalsCreated(t *testing.T)  {
 
 	// 1. Insert the first leaf into empty tree
 	key1 := common.HashValue{0x00}
-	value1 := valueT{[]byte{1, 2}}
+	value1 := ValueT{[]byte{1, 2}}
 	_, batch1 := tree.PutValueSet([]valueSetItem{{key1, value1}}, 0)
 	db.writeTreeUpdateBatch(batch1)
 	t.Logf("db1: %+v \n", db)
@@ -110,7 +102,7 @@ func TestInsertAtLeafWithMultipleInternalsCreated(t *testing.T)  {
 	// Change the 2nd nibble to 1.
 	key2 := updateNibble(key1, 1, 1)
 	t.Logf("key2: %+v", key2)
-	value2 := valueT{[]byte{3, 4}}
+	value2 := ValueT{[]byte{3, 4}}
 	_, batch2 := tree.PutValueSet([]valueSetItem{{key2, value2}}, 1)
 	t.Logf("db len: %+v \n", db.numNodes())
 	t.Logf("batch2: %+v \n", batch2)
@@ -146,7 +138,7 @@ func TestInsertAtLeafWithMultipleInternalsCreated(t *testing.T)  {
 	assert.Equal(t, rootInternal, db.getNode(NodeKey{}.newEmptyPath(1)))
 
 	// 3. Update leaf2 with new value
-	value2Update := valueT{[]byte{5, 6}}
+	value2Update := ValueT{[]byte{5, 6}}
 	_, batch3 := tree.PutValueSet([]valueSetItem{{key2, value2Update}}, 2)
 	t.Logf("batch3: %+v \n", batch3)
 	t.Logf("db len: %+v", db.numNodes())
@@ -175,23 +167,23 @@ func TestInsertAtLeafWithMultipleInternalsCreated(t *testing.T)  {
 
 func TestBatchInsertion(t *testing.T)  {
 	key1 := common.HashValue{00}
-	value1 := valueT{[]byte{1}}
+	value1 := ValueT{[]byte{1}}
 
 	key2 := updateNibble(key1, 0, 2)
-	value2 := valueT{[]byte{2}}
-	value2Update := valueT{[]byte{22}}
+	value2 := ValueT{[]byte{2}}
+	value2Update := ValueT{[]byte{22}}
 
 	key3 := updateNibble(key1, 1, 3)
-	value3 := valueT{[]byte{3}}
+	value3 := ValueT{[]byte{3}}
 
 	key4 := updateNibble(key1, 1, 4)
-	value4 := valueT{[]byte{4}}
+	value4 := ValueT{[]byte{4}}
 
 	key5 := updateNibble(key1, 5, 5)
-	value5 := valueT{[]byte{5}}
+	value5 := ValueT{[]byte{5}}
 
 	key6 := updateNibble(key1, 3, 6)
-	value6 := valueT{[]byte{6}}
+	value6 := ValueT{[]byte{6}}
 
 	var batches [][]valueSetItem
 	var oneBatch []valueSetItem
@@ -254,4 +246,52 @@ func TestBatchInsertion(t *testing.T)  {
 	for _, item := range oneBatch {
 		assert.Equal(t, item.value, tree.treeGetValue(item.hashK, 6))
 	}
+}
+
+func TestNonExistence(t *testing.T)  {
+	db := MockTreeStore{}.new()
+	tree := JfMerkleTree{
+		reader: db,
+		value:  nil,
+	}
+	key1 := common.HashValue{0}
+	value1 := ValueT{[]byte{1}}
+
+	key2 := updateNibble(key1, 0, 15)
+	value2 := ValueT{[]byte{2}}
+
+	key3 := updateNibble(key1, 2, 3)
+	value3 := ValueT{[]byte{3}}
+
+	root, batch := tree.PutValueSet([]valueSetItem{
+		{key1, value1},
+		{key2, value2},
+		{key3, value3}}, 0)
+	db.writeTreeUpdateBatch(batch)
+
+	assert.Equal(t, value1, tree.treeGetValue(key1, 0))
+	assert.Equal(t, value2, tree.treeGetValue(key2, 0))
+	assert.Equal(t, value3, tree.treeGetValue(key3, 0))
+	assert.Equal(t, 6, db.numNodes())
+
+	// test non-existing nodes.
+	// 1. Non-existing node at root node
+	nonExistingKey := updateNibble(key1, 0, 1)
+	t.Logf("nonKey: %v", nonExistingKey)
+	value, proof := tree.getWithProof(nonExistingKey, 0)
+	t.Logf("proof siblings: %+v \n", proof.siblings)
+	assert.Equal(t, nil, value)
+	proof.verify(root, nonExistingKey, nil)
+
+	// 2. Non-existing node at non-root internal node
+	nonExistingKey = updateNibble(key1, 1, 15)
+	value, proof = tree.getWithProof(nonExistingKey, 0)
+	assert.Equal(t, nil, value)
+	proof.verify(root, nonExistingKey, nil)
+
+	// 3. Non-existing node at leaf node
+	nonExistingKey = updateNibble(key1, 2, 4)
+	value, proof = tree.getWithProof(nonExistingKey, 0)
+	assert.Equal(t, nil, value)
+	proof.verify(root, nonExistingKey, nil)
 }

@@ -186,10 +186,11 @@ func (internal *InternalNode) merkleHash(start uint8, width uint8, existenceBitm
 ///     |   MSB|<---------------------- uint 16 ---------------------------->|LSB
 ///  height    chs: `child_half_start`         shs: `sibling_half_start`
 /// ```
+// []common.HashValue len: 4
 func (internal *InternalNode) getChildWithSiblings(nodeKey NodeKey, n Nibble) (interface{}, []common.HashValue) {
 	var siblings []common.HashValue
 	existenceBitmap, leafBitmap := internal.generateBitmaps()
-	for h:=uint8(0); h<4; h++ {
+	for h:=uint8(3); h>=0; h-- {
 		width := uint8(1 << h)
 		childHalfStart, siblingHalfStart := GetChildAndSiblingHalfStart(n, h)
 		siblings = append(siblings, internal.merkleHash(siblingHalfStart, width, existenceBitmap, leafBitmap))

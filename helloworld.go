@@ -86,6 +86,10 @@ func main() {
 	fmt.Printf("cats address: %p", cats)
 	cats2 := cats
 	fmt.Printf("cats2 address: %p", cats2)
+
+	slice1 := []int{1,2}
+	slice1 = append(slice1, []int{3,4}...)
+	fmt.Println(slice1)
 }
 
 func test1() cat {

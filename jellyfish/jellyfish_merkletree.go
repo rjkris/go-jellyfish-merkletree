@@ -1,6 +1,7 @@
 package jellyfish
 
 import (
+	"crypto/sha256"
 	"fmt"
 	mapset "github.com/deckarep/golang-set"
 	"github.com/rjkris/go-jellyfish-merkletree/common"
@@ -16,8 +17,12 @@ type JfValue interface {  // TODO: 接口定义
     getValue() []byte
 }
 
+type ValueT struct {
+	value []byte
+}
+
 type TreeWriter interface {
-	writeNodeBatch()
+	writeTreeUpdateBatch(batch TreeUpdateBatch)
 }
 
 type NodeBatch map[NodeKey]Node  // NodeKey类型不能比较
@@ -52,6 +57,14 @@ type valueSetItem struct {
 	value JfValue
 }
 
+func (v ValueT)getValue() []byte {
+	return v.value
+}
+
+func (v ValueT)Hash() common.HashValue {
+	valueHash := sha256.Sum256(v.getValue())
+	return valueHash
+}
 
 func (jf *JfMerkleTree)treeGetValue(key common.HashValue, version Version) JfValue {
 	res, _ := jf.getWithProof(key, version)
@@ -289,25 +302,25 @@ func (jf *JfMerkleTree)getWithProof(key common.HashValue, version Version) (JfVa
 			if childNodeKey == nil  {
 				fmt.Println("proof111111111")
 				return nil, SparseMerkleProof{
-					leaf:     LeafNode{},
-					siblings: siblings,
+					leaf:     common.SparseMerkleLeafNode{},
+					siblings: common.Reverse(siblings),
 				}
 			} else {
 				nextNodeKey = childNodeKey.(NodeKey)
 			}
 		case LeafNode:
 			if node.AccountKey == key {
-				return node.Value.(JfValue), SparseMerkleProof{node, siblings}
+				return node.Value.(JfValue), SparseMerkleProof{common.SparseMerkleLeafNode{node.AccountKey, node.ValueHash}, common.Reverse(siblings)}
 			} else {
 				fmt.Println("proof2222222222")
-				return nil, SparseMerkleProof{node, siblings}
+				return nil, SparseMerkleProof{common.SparseMerkleLeafNode{node.AccountKey, node.ValueHash}, common.Reverse(siblings)}
 			}
 		case NoneNode:
 			fmt.Printf("getnode nonenode")
 			if nibbleDepth == 0 {
 				fmt.Println("proof3333333333")
 				return nil, SparseMerkleProof{
-					leaf:     LeafNode{},
+					leaf:     common.SparseMerkleLeafNode{},
 					siblings: []common.HashValue{},
 				}
 			} else {
@@ -327,7 +340,7 @@ func ChildrenClone(children Children) Children {
 	}
 	return newChildren
 }
-//
+//TODO: add getRangeProof
 //func (jf *JfMerkleTree)getRangeProof(rightmostKeyToProve common.HashValue, version Version) SparseMerkleProof {
 //	account, proof := jf.getWithProof(rightmostKeyToProve, version)
 //	if account == nil {
