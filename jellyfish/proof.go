@@ -17,20 +17,20 @@ type SparseMerkleRangeProof struct {
 	rightSiblings []common.HashValue
 }
 
-func (smp *SparseMerkleProof)verify(expectedRootHash common.HashValue, elementKey common.HashValue, elementValue interface{})  {
-	fmt.Printf("verify siblings len: %v", len(smp.siblings))
+func (smp *SparseMerkleProof)verify(expectedRootHash common.HashValue, elementKey common.HashValue, elementValue JfValue) bool {
+	//fmt.Printf("verify siblings len: %v", len(smp.siblings))
 	if len(smp.siblings) > common.LengthInBits {
 		panic("siblings len too long")
 	}
 	if elementValue != nil {
 		elementValue := elementValue.(ValueT)
-		if elementKey != smp.leaf.ValueHash {
+		if elementKey != smp.leaf.Key {
 			panic(fmt.Sprintf("keys do not match. key in proof: %v, expected key: %v",
-				smp.leaf.ValueHash, elementKey))
+				smp.leaf.Key, elementKey))
 		}
 		hash := elementValue.Hash()
 		if hash != smp.leaf.ValueHash {
-			panic(fmt.Sprintf("value hashes do not match. Value hash in proof: %v, expected value hash: %v",
+			panic(fmt.Sprintf("Value hashes do not match. Value hash in proof: %v, expected Value hash: %v",
 				smp.leaf.ValueHash, hash))
 		}
 	} else {
@@ -45,7 +45,7 @@ func (smp *SparseMerkleProof)verify(expectedRootHash common.HashValue, elementKe
 		currentHash = smp.leaf.Hash()
 	}
 	bitKey := elementKey.Bytes2Bits()
-	fmt.Printf("bitKey: %v", bitKey)
+	//fmt.Printf("bitKey: %v", bitKey)
 	i, j := 0, len(smp.siblings)-1
 	for i<len(smp.siblings) {
 		if bitKey[j] == 1 {
@@ -57,10 +57,11 @@ func (smp *SparseMerkleProof)verify(expectedRootHash common.HashValue, elementKe
 		j -= 1
 	}
 	if currentHash != expectedRootHash {
-		panic(fmt.Sprintf("root hashes do not match. Actual root hash: %v, expected root hash: %v",
-			currentHash, expectedRootHash))
+		fmt.Printf("root hashes do not match. Actual root hash: %v, expected root hash: %v \n",
+			currentHash, expectedRootHash)
+		return false
 	}
-	return
+	return true
 }
 
 func (smp *SparseMerkleProof)new(leaf common.SparseMerkleLeafNode, siblings []common.HashValue) SparseMerkleProof {

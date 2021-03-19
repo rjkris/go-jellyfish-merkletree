@@ -8,22 +8,22 @@ type MockTreeStore struct {
 	allowOverwrite bool
 }
 
-func (mts MockTreeStore)new() *MockTreeStore {
+func (mts MockTreeStore) New() *MockTreeStore {
 	return &MockTreeStore{
 		data:           map[NodeKey]Node{},
 		staleNode:      mapset.NewSet(),
 		allowOverwrite: false,
 	}
 }
-func (mts *MockTreeStore)getNode(nodeK NodeKey) interface{} {
-	return mts.data[nodeK]
+func (mts *MockTreeStore)getNode(nodeK NodeKey) (Node, error) {
+	return mts.data[nodeK], nil
 }
 
 func (mts *MockTreeStore)getRightMostLeaf() LeafNode {
 	return LeafNode{}
 }
 
-func (mts *MockTreeStore)writeTreeUpdateBatch(batch TreeUpdateBatch)  {
+func (mts *MockTreeStore)writeTreeUpdateBatch(batch TreeUpdateBatch) error {
 	for k, v := range batch.NodeBch {
 		mts.putNode(k, v)
 	}
@@ -31,6 +31,7 @@ func (mts *MockTreeStore)writeTreeUpdateBatch(batch TreeUpdateBatch)  {
 		i := k.(StaleNodeIndex)
 		mts.putStaleNodeIndex(i)
 	}
+	return nil
 }
 
 func (mts *MockTreeStore)putNode(nodeK NodeKey, node Node) {

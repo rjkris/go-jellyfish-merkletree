@@ -9,14 +9,14 @@ import (
 func TestInternalHashAndProof(t *testing.T)  {
 	//bytes := common.HashValue{}.Random().Bytes()
 	//bytes[len(bytes)-1] &= 0xf0
-	//internalNodeKey := NodeKey{0, *NibblePath{}.new(bytes)}
+	//internalNodeKey := NodeKey{0, *NibblePath{}.New(bytes)}
 	children := Children{}
 	index1 := Nibble(4)
 	index2 := Nibble(15)
 	hash1 := common.HashValue{}.Random()
 	hash2 := common.HashValue{}.Random()
-	//child1NodeKey, _ := genLeafKeys(0, internalNodeKey.np, index1)
-	//child2NodeKey, _ := genLeafKeys(1, internalNodeKey.np, index2)
+	//child1NodeKey, _ := genLeafKeys(0, internalNodeKey.Np, index1)
+	//child2NodeKey, _ := genLeafKeys(1, internalNodeKey.Np, index2)
 	children[index1] = Child{hash1, 0, false}
 	children[index2] = Child{hash2, 1, false}
 	internalNode := InternalNode{}.new(children)

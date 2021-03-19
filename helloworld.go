@@ -90,6 +90,9 @@ func main() {
 	slice1 := []int{1,2}
 	slice1 = append(slice1, []int{3,4}...)
 	fmt.Println(slice1)
+
+	dog1 := dog{skill: map[string]eat{}}
+	fmt.Printf("%+v", dog1.skill["eat"])
 }
 
 func test1() cat {
@@ -104,3 +107,12 @@ func test2() *map[int]cat {
 	fmt.Printf("cat array address: %p", &res)
 	return &res
 }
+
+type eat interface {
+
+}
+
+type dog struct {
+	skill map[string]eat
+}
+

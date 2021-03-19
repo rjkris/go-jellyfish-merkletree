@@ -30,7 +30,7 @@ type interator interface {
 
 type Nibble = uint8
 
-// Creates a new `NibblePath` from a vector of Bytes assuming each byte has 2 nibbles.
+// Creates a New `NibblePath` from a vector of Bytes assuming each byte has 2 nibbles.
 func (np NibblePath) new(bytes []uint8) *NibblePath {
 	// TODO: Bytes len check
 	if len(bytes) > common.HashLength {
@@ -60,10 +60,10 @@ func (np NibblePath) newOdd(bytes []uint8) (*NibblePath, error) {
 
 // Adds a nibble to the end of the nibble path
 func (np *NibblePath) push(nibble Nibble) {
-	fmt.Println("pushinggggggggg")
+	// fmt.Println("pushinggggggggg")
 	// TODO: Bytes len check
 	if np.NumNibbles%2 == 0 {
-		//np.Bytes = append(np.Bytes, nibble<<4)
+		//Np.Bytes = append(Np.Bytes, nibble<<4)
 		np.Bytes[np.NumNibbles/2] = nibble<<4
 	} else {
 		np.Bytes[np.NumNibbles/2] |= nibble
@@ -77,7 +77,7 @@ func (np *NibblePath) pop() (Nibble, error) {
 	if np.NumNibbles <= 0 {
 		return lastNibble, fmt.Errorf("nibblePath is empty")
 	}
-	//l := len(np.Bytes)
+	//l := len(Np.Bytes)
 	l := np.NumNibbles/2
 	if np.NumNibbles%2 == 0 {
 		lastNibble = np.Bytes[l-1] & 0x0f
@@ -252,7 +252,7 @@ func (nIter *NibbleIterator)isFinished() bool {
 func SkipCommonPrefix(x interator, y interator) uint {
 	var count uint = 0
 	for {
-		fmt.Println("debugggg in skip")
+		// fmt.Println("debugggg in skip")
 		xPeek := x.peek()
 		yPeek := y.peek()
 		if xPeek == nil || yPeek == nil || xPeek != yPeek {

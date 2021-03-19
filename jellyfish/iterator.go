@@ -53,11 +53,11 @@ func (nodeVI *NodeVisitInfo)advance()  {
 	}
 }
 //
-//func (jfIterator *JfMerkleIterator)new(reader interface{}, version Version, startingKey common.HashValue) JfMerkleIterator {
+//func (jfIterator *JfMerkleIterator)New(reader interface{}, version Version, startingKey common.HashValue) JfMerkleIterator {
 //	var parentStack []NodeVisitInfo
 //	var done bool = false
 //	currentNodeKey := NodeKey{}.newEmptyPath(version)
-//	nibblePath := NibblePath{}.new(startingKey.Bytes())
+//	nibblePath := NibblePath{}.New(startingKey.Bytes())
 //	nibbleIter := nibblePath.nibbles()
 //	for node := Node{Internal: }
 //}

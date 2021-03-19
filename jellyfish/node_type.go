@@ -11,27 +11,27 @@ const PreGenesisVersion Version = 1<<64-1
 
 type NodeKey struct {
 	Vs Version
-	np NibblePath
+	Np NibblePath
 }
 
 type Child struct {
 	Hash   common.HashValue
 	Vs     Version
-	isLeaf bool
+	IsLeaf bool
 }
 
-// [`Children`] is just a collection of children belonging to a [`InternalNode`], indexed from 0 to
+// [`Children`] is just a collection of Children belonging to a [`InternalNode`], indexed from 0 to
 // 15, inclusive.
 type Children map[Nibble]Child
 
 type InternalNode struct {
-	children Children
+	Children Children
 }
 
 type LeafNode struct {
 	AccountKey common.HashValue
 	ValueHash common.HashValue
-	Value interface{}
+	Value ValueT
 }
 
 type NoneNode struct {
@@ -49,14 +49,14 @@ func (nk NodeKey)newEmptyPath(version Version) NodeKey {
 }
 // Generates a child node key based on this node key.
 func (nk NodeKey) genChildNodeKey(v Version, n Nibble) NodeKey {
-	nodeNibblePath := nk.np
+	nodeNibblePath := nk.Np
 	(&nodeNibblePath).push(n)
 	return NodeKey{v, nodeNibblePath}
 }
 
 // Generates parent node key at the same Vs based on this node key.
 func (nk NodeKey) genParentNodeKey() NodeKey {
-	nodeNibblePath := nk.np
+	nodeNibblePath := nk.Np
 	if nodeNibblePath.NumNibbles == 1 {
 		panic("Current node key is root")
 	}
@@ -78,7 +78,7 @@ func (internal InternalNode) new(children Children) InternalNode {
 	}
 	if len(children) == 1 {
 		for _, value := range children {
-			if value.isLeaf {
+			if value.IsLeaf {
 				panic("Child can't be a leaf node")
 			}
 		}
@@ -110,7 +110,7 @@ func (internal *InternalNode) deserialize() {
 
 // Gets the `n`-th child.
 func (internal *InternalNode) child(n Nibble) Child {
-	return internal.children[n]
+	return internal.Children[n]
 }
 
 // Generates `existence_bitmap` and `leaf_bitmap` as a pair of `u16`s: child at index `i`
@@ -119,9 +119,9 @@ func (internal *InternalNode) child(n Nibble) Child {
 func (internal *InternalNode) generateBitmaps() (uint16, uint16) {
 	var existenceBitmap uint16
 	var leafBitmap uint16
-	for nibble, child := range internal.children {
+	for nibble, child := range internal.Children {
 		existenceBitmap |= 1 << nibble
-		if child.isLeaf {
+		if child.IsLeaf {
 			leafBitmap |= 1 << nibble
 		}
 	}
@@ -214,7 +214,7 @@ func GetChildAndSiblingHalfStart(n Nibble, height uint8) (uint8, uint8) {
 
 func (lf *LeafNode)new(accountKey common.HashValue, value JfValue) LeafNode {
 	valueHash := sha256.Sum256(value.getValue())
-	return LeafNode{accountKey, valueHash, value}
+	return LeafNode{accountKey, valueHash, value.(ValueT)}
 }
 
 func (lf LeafNode)hash() common.HashValue {
