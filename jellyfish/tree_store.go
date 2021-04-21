@@ -21,7 +21,7 @@ func NewTreeStore() *treeStore {
 }
 
 func (ts *treeStore)getNode(nodeK NodeKey) (Node, error) {
-	// fmt.Println("leveldbbbbbbbbbbbbb")
+	//fmt.Println("leveldbbbbbbbbbbbbb")
 	nodeKByte, _ := json.Marshal(nodeK)
 	nodeVByte, err :=  ts.db.Get(nodeKByte)
 	if err != nil {  // not exit

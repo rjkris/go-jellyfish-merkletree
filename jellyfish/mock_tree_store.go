@@ -1,6 +1,8 @@
 package jellyfish
 
-import mapset "github.com/deckarep/golang-set"
+import (
+	mapset "github.com/deckarep/golang-set"
+)
 
 type MockTreeStore struct {
 	data map[NodeKey]Node
@@ -16,6 +18,7 @@ func (mts MockTreeStore) New() *MockTreeStore {
 	}
 }
 func (mts *MockTreeStore)getNode(nodeK NodeKey) (Node, error) {
+	//fmt.Println("mock get node")
 	return mts.data[nodeK], nil
 }
 
