@@ -14,7 +14,7 @@ type TreeReader interface {
 
 type JfValue interface {  // TODO: 接口定义
     // New([]uint8) JfValue
-    getValue() []byte
+    GetValue() []byte
 }
 
 type ValueT struct {
@@ -22,7 +22,7 @@ type ValueT struct {
 }
 
 type TreeWriter interface {
-	writeTreeUpdateBatch(batch TreeUpdateBatch) error
+	WriteTreeUpdateBatch(batch TreeUpdateBatch) error
 }
 
 type NodeBatch map[NodeKey]Node  // NodeKey类型不能比较
@@ -48,21 +48,21 @@ type TreeUpdateBatch struct {
 }
 
 type JfMerkleTree struct {
-	reader TreeReader  // TODO:  reader接口化
-	value interface{}
+	Reader TreeReader  // TODO:  reader接口化
+	Value interface{}
 }
 
-type valueSetItem struct {
-	hashK common.HashValue
-	value JfValue
+type ValueSetItem struct {
+	HashK common.HashValue
+	Value JfValue
 }
 
-func (v ValueT)getValue() []byte {
+func (v ValueT) GetValue() []byte {
 	return v.Value
 }
 
 func (v ValueT)Hash() common.HashValue {
-	valueHash := sha256.Sum256(v.getValue())
+	valueHash := sha256.Sum256(v.GetValue())
 	return valueHash
 }
 
@@ -71,16 +71,16 @@ func (jf *JfMerkleTree)treeGetValue(key common.HashValue, version Version) JfVal
 	return res
 }
 
-func (jf *JfMerkleTree)PutValueSet(valueSet []valueSetItem, version Version) (common.HashValue, TreeUpdateBatch) {
-	rootHashList, treeUpdateBatch := jf.PutValueSets([][]valueSetItem{valueSet}, version)
+func (jf *JfMerkleTree)PutValueSet(valueSet []ValueSetItem, version Version) (common.HashValue, TreeUpdateBatch) {
+	rootHashList, treeUpdateBatch := jf.PutValueSets([][]ValueSetItem{valueSet}, version)
 	if len(rootHashList) != 1 {
 		panic("root_hashes must consist of a single Value.")
 	}
 	return rootHashList[0], treeUpdateBatch
 }
 
-func (jf *JfMerkleTree)PutValueSets(valueSets [][]valueSetItem, firstVersion Version) ([]common.HashValue, TreeUpdateBatch) {
-	treeCache := TreeCache{}.new(jf.reader, firstVersion)
+func (jf *JfMerkleTree)PutValueSets(valueSets [][]ValueSetItem, firstVersion Version) ([]common.HashValue, TreeUpdateBatch) {
+	treeCache := TreeCache{}.new(jf.Reader, firstVersion)
 
 	for i, valueSet := range valueSets {
 		if len(valueSet) == 0 {
@@ -88,7 +88,7 @@ func (jf *JfMerkleTree)PutValueSets(valueSets [][]valueSetItem, firstVersion Ver
 		}
 		version := firstVersion+Version(i)
 		for _, item := range valueSet {
-			jf.put(item.hashK, item.value, version, treeCache)
+			jf.put(item.HashK, item.Value, version, treeCache)
 		}
 		treeCache.freeze()
 	}
@@ -289,7 +289,7 @@ func (jf *JfMerkleTree)getWithProof(key common.HashValue, version Version) (JfVa
 	for nibbleDepth :=0; nibbleDepth <=common.RootNibbleHeight; nibbleDepth++ {
 		// fmt.Printf("current nextNode: %+v \n", nextNodeKey)
 		// fmt.Println("debugggggggggggggggggggggg")
-		nextNode, _ := jf.reader.getNode(nextNodeKey)
+		nextNode, _ := jf.Reader.getNode(nextNodeKey)
 		//if err != nil {
 		//	panic(err)
 		//}

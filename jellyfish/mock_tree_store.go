@@ -26,7 +26,7 @@ func (mts *MockTreeStore)getRightMostLeaf() LeafNode {
 	return LeafNode{}
 }
 
-func (mts *MockTreeStore)writeTreeUpdateBatch(batch TreeUpdateBatch) error {
+func (mts *MockTreeStore) WriteTreeUpdateBatch(batch TreeUpdateBatch) error {
 	for k, v := range batch.NodeBch {
 		mts.putNode(k, v)
 	}

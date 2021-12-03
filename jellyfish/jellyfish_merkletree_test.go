@@ -44,14 +44,11 @@ func TestJfMerkleTree_PutValueSet(t *testing.T) {
 
 func TestInsertToEmptyTree(t *testing.T)  {
 	db := MockTreeStore{}.New()
-	tree := JfMerkleTree{
-		reader: db,
-		value:  nil,
-	}
+	tree := JfMerkleTree{db, nil}
 	key := common.HashValue{}.Random()
 	value := ValueT{[]byte{43, 43, 67, 98}}
-	testItem := valueSetItem{key, value}
-	newRootHash, batch := (&tree).PutValueSet([]valueSetItem{testItem}, 0)
+	testItem := ValueSetItem{key, value}
+	newRootHash, batch := (&tree).PutValueSet([]ValueSetItem{testItem}, 0)
 	assert.NotEmpty(t, batch)
 	assert.NotEmpty(t, batch.StaleNodeIndexBch)
 	t.Logf("newRootHash: %+v \n", newRootHash)
@@ -59,7 +56,7 @@ func TestInsertToEmptyTree(t *testing.T)  {
 	for k, v := range batch.NodeBch {
 		t.Logf("k: %+v, v: %+v", k, v)
 	}
-	_ = db.writeTreeUpdateBatch(batch)
+	_ = db.WriteTreeUpdateBatch(batch)
 	t.Logf("db: %+v \n", db)
 	actual, proof := tree.getWithProof(key, 0)
 	t.Logf("actual: %+v \n", actual)
@@ -79,10 +76,10 @@ func TestInsertToPreGenesis(t *testing.T)  {
 	key2 := updateNibble(key1, 0, 15)
 	t.Logf("key2: %+v \n", key2)
 	value2 := ValueT{[]byte{12, 23, 34, 45}}
-	_, batch := tree.PutValueSet([]valueSetItem{{key2, value2}}, 0)
+	_, batch := tree.PutValueSet([]ValueSetItem{{key2, value2}}, 0)
 	t.Logf("batch: %+v \n", batch)
 	assert.Equal(t, 1, batch.StaleNodeIndexBch.Cardinality())
-	db.writeTreeUpdateBatch(batch)
+	db.WriteTreeUpdateBatch(batch)
 	t.Logf("db: %+v \n", db)
 	assert.Equal(t, 4, db.numNodes())
 	actual1, proof1 := tree.getWithProof(key1, 0)
@@ -105,8 +102,8 @@ func TestInsertAtLeafWithMultipleInternalsCreated(t *testing.T)  {
 	// 1. Insert the first leaf into empty tree
 	key1 := common.HashValue{0x00}
 	value1 := ValueT{[]byte{1, 2}}
-	_, batch1 := tree.PutValueSet([]valueSetItem{{key1, value1}}, 0)
-	db.writeTreeUpdateBatch(batch1)
+	_, batch1 := tree.PutValueSet([]ValueSetItem{{key1, value1}}, 0)
+	db.WriteTreeUpdateBatch(batch1)
 	t.Logf("db1: %+v \n", db)
 	actual1, _ := tree.getWithProof(key1, 0)
 	assert.Equal(t, value1, actual1)
@@ -116,10 +113,10 @@ func TestInsertAtLeafWithMultipleInternalsCreated(t *testing.T)  {
 	key2 := updateNibble(key1, 1, 1)
 	t.Logf("key2: %+v", key2)
 	value2 := ValueT{[]byte{3, 4}}
-	_, batch2 := tree.PutValueSet([]valueSetItem{{key2, value2}}, 1)
+	_, batch2 := tree.PutValueSet([]ValueSetItem{{key2, value2}}, 1)
 	t.Logf("db len: %+v \n", db.numNodes())
 	t.Logf("batch2: %+v \n", batch2)
-	db.writeTreeUpdateBatch(batch2)
+	db.WriteTreeUpdateBatch(batch2)
 	t.Logf("db2: %+v \n", db)
 	actual2, _ := tree.getWithProof(key2, 1)
 	assert.Equal(t, value2, actual2)
@@ -153,10 +150,10 @@ func TestInsertAtLeafWithMultipleInternalsCreated(t *testing.T)  {
 
 	// 3. Update leaf2 with New Value
 	value2Update := ValueT{[]byte{5, 6}}
-	_, batch3 := tree.PutValueSet([]valueSetItem{{key2, value2Update}}, 2)
+	_, batch3 := tree.PutValueSet([]ValueSetItem{{key2, value2Update}}, 2)
 	t.Logf("batch3: %+v \n", batch3)
 	t.Logf("db len: %+v", db.numNodes())
-	db.writeTreeUpdateBatch(batch3)
+	db.WriteTreeUpdateBatch(batch3)
 	t.Logf("db3: %+v \n", db)
 	t.Logf("getwithproof debug--------- \n")
 	actual3, _ := tree.getWithProof(key2, 0)
@@ -199,15 +196,15 @@ func TestBatchInsertion(t *testing.T)  {
 	key6 := updateNibble(key1, 3, 6)
 	value6 := ValueT{[]byte{6}}
 
-	var batches [][]valueSetItem
-	var oneBatch []valueSetItem
-	batches = append(batches, []valueSetItem{{key1, value1}})
-	batches = append(batches, []valueSetItem{{key2, value2}})
-	batches = append(batches, []valueSetItem{{key3, value3}})
-	batches = append(batches, []valueSetItem{{key4, value4}})
-	batches = append(batches, []valueSetItem{{key5, value5}})
-	batches = append(batches, []valueSetItem{{key6, value6}})
-	batches = append(batches, []valueSetItem{{key2, value2Update}})
+	var batches [][]ValueSetItem
+	var oneBatch []ValueSetItem
+	batches = append(batches, []ValueSetItem{{key1, value1}})
+	batches = append(batches, []ValueSetItem{{key2, value2}})
+	batches = append(batches, []ValueSetItem{{key3, value3}})
+	batches = append(batches, []ValueSetItem{{key4, value4}})
+	batches = append(batches, []ValueSetItem{{key5, value5}})
+	batches = append(batches, []ValueSetItem{{key6, value6}})
+	batches = append(batches, []ValueSetItem{{key2, value2Update}})
 
 	t.Logf("batches len: %v", len(batches))
 	for i, item := range batches {
@@ -220,29 +217,23 @@ func TestBatchInsertion(t *testing.T)  {
 
 	// insert as one batch
     db := MockTreeStore{}.New()
-    tree := JfMerkleTree{
-		reader: db,
-		value:  nil,
-	}
+    tree := JfMerkleTree{db, nil}
 	_, batch := tree.PutValueSet(oneBatch, 0)
-	db.writeTreeUpdateBatch(batch)
+	db.WriteTreeUpdateBatch(batch)
 
 	assert.Equal(t, 12, db.numNodes())
 	for _, item := range oneBatch {
-		assert.Equal(t, item.value, tree.treeGetValue(item.hashK, 0))
+		assert.Equal(t, item.Value, tree.treeGetValue(item.HashK, 0))
 	}
 
 	// Insert in multiple batches.
 	db = MockTreeStore{}.New()
-	tree = JfMerkleTree{
-		reader: db,
-		value:  nil,
-	}
+	tree = JfMerkleTree{db, nil}
 	_, batch2 := tree.PutValueSets(batches, 0)
-	db.writeTreeUpdateBatch(batch2)
+	db.WriteTreeUpdateBatch(batch2)
 
 	for _, item := range oneBatch {
-		assert.Equal(t, item.value, tree.treeGetValue(item.hashK, 6))
+		assert.Equal(t, item.Value, tree.treeGetValue(item.HashK, 6))
 	}
 	assert.Equal(t, 26, db.numNodes())
 	db.purgeStaleNodes(1)
@@ -258,16 +249,13 @@ func TestBatchInsertion(t *testing.T)  {
 	db.purgeStaleNodes(6)
 	assert.Equal(t, 12, db.numNodes())
 	for _, item := range oneBatch {
-		assert.Equal(t, item.value, tree.treeGetValue(item.hashK, 6))
+		assert.Equal(t, item.Value, tree.treeGetValue(item.HashK, 6))
 	}
 }
 
 func TestNonExistence(t *testing.T)  {
 	db := MockTreeStore{}.New()
-	tree := JfMerkleTree{
-		reader: db,
-		value:  nil,
-	}
+	tree := JfMerkleTree{db, nil}
 	key1 := common.HashValue{0}
 	value1 := ValueT{[]byte{1}}
 
@@ -277,11 +265,11 @@ func TestNonExistence(t *testing.T)  {
 	key3 := updateNibble(key1, 2, 3)
 	value3 := ValueT{[]byte{3}}
 
-	root, batch := tree.PutValueSet([]valueSetItem{
+	root, batch := tree.PutValueSet([]ValueSetItem{
 		{key1, value1},
 		{key2, value2},
 		{key3, value3}}, 0)
-	db.writeTreeUpdateBatch(batch)
+	db.WriteTreeUpdateBatch(batch)
 
 	assert.Equal(t, value1, tree.treeGetValue(key1, 0))
 	assert.Equal(t, value2, tree.treeGetValue(key2, 0))
@@ -313,22 +301,19 @@ func TestNonExistence(t *testing.T)  {
 func TestManyKeysGetProofAndVerifyTreeRoot(t *testing.T)  {
 	numKeys := 10000
 	db := MockTreeStore{}.New()
-	tree := JfMerkleTree{
-		reader: db,
-		value:  nil,
-	}
-	var kvs []valueSetItem
+	tree := JfMerkleTree{db, nil}
+	var kvs []ValueSetItem
 	for i:=0; i<numKeys; i++ {
 		key := common.HashValue{}.Random()
 		value := ValueT{common.HashValue{}.Random().Bytes()}
-		kvs = append(kvs, valueSetItem{key, value})
+		kvs = append(kvs, ValueSetItem{key, value})
 	}
 	_, batch := tree.PutValueSet(kvs, 0)
-	db.writeTreeUpdateBatch(batch)
+	db.WriteTreeUpdateBatch(batch)
 	//for _, item := range kvs {
-	//	proofValue, proof := tree.getWithProof(item.hashK, 0)
-	//	assert.Equal(t, item.value, proofValue)
-	//	res := proof.verify(root, item.hashK, item.value)
+	//	proofValue, proof := tree.getWithProof(item.HashK, 0)
+	//	assert.Equal(t, item.Value, proofValue)
+	//	res := proof.verify(root, item.HashK, item.Value)
 	//	assert.Equal(t, true, res)
 	//}
 }
@@ -351,16 +336,16 @@ func TestManyVersionsGetProofAndVerifyTreeRoot(t *testing.T)  {
 	}
 	// insert all keys
 	for index, item := range kvus {
-		root, batch := tree.PutValueSet([]valueSetItem{{item.key, item.value}}, Version(index))
+		root, batch := tree.PutValueSet([]ValueSetItem{{item.key, item.value}}, Version(index))
 		roots = append(roots, root)
-		db.writeTreeUpdateBatch(batch)
+		db.WriteTreeUpdateBatch(batch)
 	}
 	// update Value of all keys
 	//for index, item := range kvus {
 	//	version := Version(numVersions+index)
-	//	root, batch := tree.PutValueSet([]valueSetItem{{item.key, item.updatedValue}}, version)
+	//	root, batch := tree.PutValueSet([]ValueSetItem{{item.key, item.updatedValue}}, version)
 	//	roots = append(roots, root)
-	//	db.writeTreeUpdateBatch(batch)
+	//	db.WriteTreeUpdateBatch(batch)
 	//}
 
 	for index, item := range kvus {
@@ -382,14 +367,11 @@ func TestManyVersionsGetProofAndVerifyTreeRoot(t *testing.T)  {
 
 func TestInsertToEmptyTreeLevel(t *testing.T)  {
 	db := NewTreeStore()
-	tree := JfMerkleTree{
-		reader: db,
-		value:  nil,
-	}
+	tree := JfMerkleTree{db, nil}
 	key := common.HashValue{}.Random()
 	value := ValueT{[]byte{43, 43, 67, 98}}
-	testItem := valueSetItem{key, value}
-	newRootHash, batch := (&tree).PutValueSet([]valueSetItem{testItem}, 0)
+	testItem := ValueSetItem{key, value}
+	newRootHash, batch := (&tree).PutValueSet([]ValueSetItem{testItem}, 0)
 	assert.NotEmpty(t, batch)
 	assert.NotEmpty(t, batch.StaleNodeIndexBch)
 	//t.Logf("newRootHash: %+v \n", newRootHash)
@@ -397,7 +379,7 @@ func TestInsertToEmptyTreeLevel(t *testing.T)  {
 	//for k, v := range batch.NodeBch {
 	//	t.Logf("k: %+v, v: %+v", k, v)
 	//}
-	err := db.writeTreeUpdateBatch(batch)
+	err := db.WriteTreeUpdateBatch(batch)
 	if err != nil {
 		panic(err)
 	}
@@ -411,25 +393,22 @@ func TestInsertToEmptyTreeLevel(t *testing.T)  {
 func TestManyKeysGetProofAndVerifyTreeRootLevel(t *testing.T)  {
 	numKeys := 10000
 	db := NewTreeStore()
-	tree := JfMerkleTree{
-		reader: db,
-		value:  nil,
-	}
-	var kvs []valueSetItem
+	tree := JfMerkleTree{db, nil}
+	var kvs []ValueSetItem
 	for i:=0; i<numKeys; i++ {
 		key := common.HashValue{}.Random()
 		value := ValueT{common.HashValue{}.Random().Bytes()}
-		kvs = append(kvs, valueSetItem{key, value})
+		kvs = append(kvs, ValueSetItem{key, value})
 	}
 	root, batch := tree.PutValueSet(kvs, 0)
-	err := db.writeTreeUpdateBatch(batch)
+	err := db.WriteTreeUpdateBatch(batch)
 	if err != nil {
 		panic(err)
 	}
 	for _, item := range kvs {
-		proofValue, proof := tree.getWithProof(item.hashK, 0)
-		assert.Equal(t, item.value, proofValue)
-		res := proof.verify(root, item.hashK, item.value)
+		proofValue, proof := tree.getWithProof(item.HashK, 0)
+		assert.Equal(t, item.Value, proofValue)
+		res := proof.verify(root, item.HashK, item.Value)
 		assert.Equal(t, true, res)
 	}
 }
@@ -452,24 +431,24 @@ func TestManyVersionsGetProofAndVerifyTreeRootLevel(t *testing.T)  {
 	}
 	// insert all keys
 	for index, item := range kvus {
-		root, batch := tree.PutValueSet([]valueSetItem{{item.key, item.value}}, Version(index))
+		root, batch := tree.PutValueSet([]ValueSetItem{{item.key, item.value}}, Version(index))
 		roots = append(roots, root)
-		_ = db.writeTreeUpdateBatch(batch)
+		_ = db.WriteTreeUpdateBatch(batch)
 	}
 	//// update Value of all keys
 	//for index, item := range kvus {
 	//	version := Version(numVersions+index)
-	//	root, batch := tree.PutValueSet([]valueSetItem{{item.key, item.updatedValue}}, version)
+	//	root, batch := tree.PutValueSet([]ValueSetItem{{item.key, item.updatedValue}}, version)
 	//	roots = append(roots, root)
-	//	_ = db.writeTreeUpdateBatch(batch)
+	//	_ = db.WriteTreeUpdateBatch(batch)
 	//}
 
 	//for index, item := range kvus {
 	//	rand.Seed(time.Now().UnixNano())
 	//	randomVersion := index+rand.Intn(numVersions-index)
 	//	proofValue, proof := tree.getWithProof(item.key, Version(randomVersion))
-	//	assert.Equal(t, item.value, proofValue)
-	//	assert.Equal(t, true, proof.verify(roots[randomVersion], item.key, item.value))
+	//	assert.Equal(t, item.Value, proofValue)
+	//	assert.Equal(t, true, proof.verify(roots[randomVersion], item.key, item.Value))
 	//}
 	//
 	//for index, item := range kvus {

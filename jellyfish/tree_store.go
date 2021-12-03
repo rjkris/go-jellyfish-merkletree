@@ -55,7 +55,7 @@ func (ts *treeStore)getRightMostLeaf() LeafNode {
 	return LeafNode{}
 }
 
-func (ts *treeStore)writeTreeUpdateBatch(batch TreeUpdateBatch) error {
+func (ts *treeStore) WriteTreeUpdateBatch(batch TreeUpdateBatch) error {
 	for k, v := range batch.NodeBch {
 		vByte, _ := json.Marshal(v)
 		storeKey, storeValue := k, nodeStore{NodeValue: vByte}

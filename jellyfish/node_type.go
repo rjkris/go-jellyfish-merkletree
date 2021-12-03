@@ -213,7 +213,7 @@ func GetChildAndSiblingHalfStart(n Nibble, height uint8) (uint8, uint8) {
 }
 
 func (lf *LeafNode)new(accountKey common.HashValue, value JfValue) LeafNode {
-	valueHash := sha256.Sum256(value.getValue())
+	valueHash := sha256.Sum256(value.GetValue())
 	return LeafNode{accountKey, valueHash, value.(ValueT)}
 }
 
