@@ -1,4 +1,4 @@
-package leveldb
+package storage
 //
 //import (
 //	"encoding/json"
@@ -9,7 +9,7 @@ package leveldb
 //)
 //
 //func TestLeveldb(t *testing.T) {
-//	levelDB, err := New("test db")
+//	levelDB, err := New("test Db")
 //	if err != nil {
 //		t.Logf("new leveldb error: %s", err)
 //	}
@@ -25,7 +25,7 @@ package leveldb
 //}
 //
 //func TestNodeStore(t *testing.T)  {
-//	levelDB, _ := New("test db")
+//	levelDB, _ := New("test Db")
 //	leafNode := jellyfish.LeafNode{
 //		AccountKey: common.HashValue{}.Random(),
 //		ValueHash:  common.HashValue{}.Random(),

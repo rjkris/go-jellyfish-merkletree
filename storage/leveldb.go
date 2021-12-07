@@ -1,4 +1,4 @@
-package leveldb
+package storage
 
 import (
 	"github.com/syndtr/goleveldb/leveldb"
@@ -7,8 +7,8 @@ import (
 )
 
 type KVDatabase struct {
-	db *leveldb.DB
-	fn string
+	Db       *leveldb.DB
+	fn       string
 	quitLock sync.Mutex
 }
 
@@ -21,7 +21,7 @@ func New(file string) (*KVDatabase, error) {
 		return nil, err
 	}
 	kvdb := &KVDatabase{
-		db:       db,
+		Db:       db,
 		fn:       file,
 		quitLock: sync.Mutex{},
 	}
@@ -31,11 +31,11 @@ func New(file string) (*KVDatabase, error) {
 func (kvdb *KVDatabase)Close() error {
 	kvdb.quitLock.Lock()
 	defer kvdb.quitLock.Unlock()
-	return kvdb.db.Close()
+	return kvdb.Db.Close()
 }
 
 func (kvdb *KVDatabase)Get(key []byte) ([]byte, error) {
-	res, err := kvdb.db.Get(key, nil)
+	res, err := kvdb.Db.Get(key, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -43,5 +43,5 @@ func (kvdb *KVDatabase)Get(key []byte) ([]byte, error) {
 }
 
 func (kvdb *KVDatabase)Put(key []byte, value []byte) error {
-	return kvdb.db.Put(key, value, nil)
+	return kvdb.Db.Put(key, value, nil)
 }

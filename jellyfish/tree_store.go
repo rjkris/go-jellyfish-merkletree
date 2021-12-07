@@ -3,11 +3,11 @@ package jellyfish
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/rjkris/go-jellyfish-merkletree/leveldb"
+	"github.com/rjkris/go-jellyfish-merkletree/storage"
 )
 
 type treeStore struct {
-	Db *leveldb.KVDatabase
+	Db *storage.KVDatabase
 }
 // -1: None; 1: leaf; 2: internal
 type nodeStore struct {
@@ -16,7 +16,7 @@ type nodeStore struct {
 }
 
 func NewTreeStore() *treeStore {
-	db, _ := leveldb.New("statedb")
+	db, _ := storage.New("statedb")
 	return &treeStore{Db: db}
 }
 
