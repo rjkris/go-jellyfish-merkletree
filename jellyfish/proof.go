@@ -17,8 +17,8 @@ type SparseMerkleRangeProof struct {
 	rightSiblings []common.HashValue
 }
 
-func (smp *SparseMerkleProof)verify(expectedRootHash common.HashValue, elementKey common.HashValue, elementValue JfValue) bool {
-	//fmt.Printf("verify siblings len: %v", len(smp.siblings))
+func (smp *SparseMerkleProof) Verify(expectedRootHash common.HashValue, elementKey common.HashValue, elementValue JfValue) bool {
+	//fmt.Printf("Verify siblings len: %v", len(smp.siblings))
 	if len(smp.siblings) > common.LengthInBits {
 		panic("siblings len too long")
 	}

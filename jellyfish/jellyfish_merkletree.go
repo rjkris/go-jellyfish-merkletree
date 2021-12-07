@@ -67,7 +67,7 @@ func (v ValueT)Hash() common.HashValue {
 }
 
 func (jf *JfMerkleTree)treeGetValue(key common.HashValue, version Version) JfValue {
-	res, _ := jf.getWithProof(key, version)
+	res, _ := jf.GetWithProof(key, version)
 	return res
 }
 
@@ -281,7 +281,7 @@ func (jf *JfMerkleTree)createLeafNode(nodeK NodeKey, nibbleIter *NibbleIterator,
 	return nodeK, newLeafNode
 }
 
-func (jf *JfMerkleTree)getWithProof(key common.HashValue, version Version) (JfValue, SparseMerkleProof) {
+func (jf *JfMerkleTree) GetWithProof(key common.HashValue, version Version) (JfValue, SparseMerkleProof) {
 	nextNodeKey := NodeKey{}.newEmptyPath(version)
 	var siblings []common.HashValue
 	nibblePath := NibblePath{}.new(key.Bytes())
@@ -346,7 +346,7 @@ func ChildrenClone(children Children) Children {
 }
 //TODO: add getRangeProof
 //func (jf *JfMerkleTree)getRangeProof(rightmostKeyToProve common.HashValue, version Version) SparseMerkleProof {
-//	account, proof := jf.getWithProof(rightmostKeyToProve, version)
+//	account, proof := jf.GetWithProof(rightmostKeyToProve, version)
 //	if account == nil {
 //		panic("rightmostKeyToProve must exist.")
 //	}
