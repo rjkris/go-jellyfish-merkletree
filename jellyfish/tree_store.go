@@ -7,7 +7,7 @@ import (
 )
 
 type treeStore struct {
-	db *leveldb.KVDatabase
+	Db *leveldb.KVDatabase
 }
 // -1: None; 1: leaf; 2: internal
 type nodeStore struct {
@@ -17,13 +17,13 @@ type nodeStore struct {
 
 func NewTreeStore() *treeStore {
 	db, _ := leveldb.New("statedb")
-	return &treeStore{db: db}
+	return &treeStore{Db: db}
 }
 
 func (ts *treeStore)getNode(nodeK NodeKey) (Node, error) {
 	//fmt.Println("leveldbbbbbbbbbbbbb")
 	nodeKByte, _ := json.Marshal(nodeK)
-	nodeVByte, err :=  ts.db.Get(nodeKByte)
+	nodeVByte, err :=  ts.Db.Get(nodeKByte)
 	if err != nil {  // not exit
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (ts *treeStore) WriteTreeUpdateBatch(batch TreeUpdateBatch) error {
 		var afterValue nodeStore
 		_ = json.Unmarshal(storeValueByte, &afterValue)
 		// fmt.Printf("aftervalue: %+v", afterValue)
-		err = ts.db.Put(storeKeyByte, storeValueByte)
+		err = ts.Db.Put(storeKeyByte, storeValueByte)
 		if err != nil {
 			return err
 		}

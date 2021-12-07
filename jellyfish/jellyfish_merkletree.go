@@ -98,7 +98,7 @@ func (jf *JfMerkleTree)PutValueSets(valueSets [][]ValueSetItem, firstVersion Ver
 func (jf *JfMerkleTree)put(key common.HashValue, value JfValue, version Version, treeCa *TreeCache)  {
 	nibblePath := NibblePath{}.new(key.Bytes())
 	// Get the root node. If this is the first operation, it would get the root node from the
-	// underlying db. Otherwise it most likely would come from `cache`.
+	// underlying Db. Otherwise it most likely would come from `cache`.
 	rootNodeKey := treeCa.rootNodeKey
 	nibbleIter := nibblePath.nibbles()
 	//cloneRootNodeKey := rootNodeKey

@@ -1,9 +1,8 @@
 package common
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
-	"math/rand"
-	"time"
 )
 
 const HashLength int = 32
@@ -43,8 +42,7 @@ func (h *HashValue) SetBytes(b [HashLength]byte) {
 func (h HashValue)Random() HashValue {
 	res := make([]byte, HashLength)
 	var resArray [HashLength]byte
-	rand.Seed(time.Now().UnixNano())
-	_, err := rand.Read(res)
+	_, err := rand.Read(res) // 使用crypto/rand是真随机
 	if err != nil {
 		println(err)
 	}
