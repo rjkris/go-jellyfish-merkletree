@@ -410,6 +410,9 @@ func TestManyKeysGetProofAndVerifyTreeRootLevel(t *testing.T)  {
 	if err != nil {
 		panic(err)
 	}
+	db.Db.Close()
+	db = NewTreeStore()
+	tree = JfMerkleTree{db, nil}
 	for _, item := range kvs {
 		proofValue, proof := tree.GetWithProof(item.HashK, 0)
 		assert.Equal(t, item.Value, proofValue)

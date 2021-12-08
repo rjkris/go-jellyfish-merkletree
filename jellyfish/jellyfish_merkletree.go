@@ -289,10 +289,10 @@ func (jf *JfMerkleTree) GetWithProof(key common.HashValue, version Version) (JfV
 	for nibbleDepth :=0; nibbleDepth <=common.RootNibbleHeight; nibbleDepth++ {
 		// fmt.Printf("current nextNode: %+v \n", nextNodeKey)
 		// fmt.Println("debugggggggggggggggggggggg")
-		nextNode, _ := jf.Reader.getNode(nextNodeKey)
-		//if err != nil {
-		//	panic(err)
-		//}
+		nextNode, err := jf.Reader.getNode(nextNodeKey)
+		if err != nil {
+			panic(err)
+		}
 		switch node := nextNode.(type) {
 		case InternalNode:
 			queriedChildIndex := nibbleIter.next()

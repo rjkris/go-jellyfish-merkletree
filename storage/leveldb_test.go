@@ -1,4 +1,7 @@
 package storage
+
+import "testing"
+
 //
 //import (
 //	"encoding/json"
@@ -8,21 +11,23 @@ package storage
 //	"testing"
 //)
 //
-//func TestLeveldb(t *testing.T) {
-//	levelDB, err := New("test Db")
-//	if err != nil {
-//		t.Logf("new leveldb error: %s", err)
-//	}
-//	err = levelDB.Put([]byte("leveldb"), []byte("hello leveldb22"))
-//	if err != nil {
-//		t.Logf("put error: %s", err)
-//	}
-//	value, _ := levelDB.Get([]byte("leveldb"))
-//	t.Log(string(value))
-//	if err != nil {
-//		t.Logf("get error: %s", err)
-//	}
-//}
+func TestLeveldb(t *testing.T) {
+	levelDB, err := New("test Db")
+	if err != nil {
+		t.Logf("new leveldb error: %s", err)
+	}
+	err = levelDB.Put([]byte("leveldb"), []byte("hello leveldb22"))
+	if err != nil {
+		t.Logf("put error: %s", err)
+	}
+	levelDB.Db.Close()
+	levelDB, err = New("test Db")
+	value, _ := levelDB.Get([]byte("leveldb"))
+	t.Log(string(value))
+	if err != nil {
+		t.Logf("get error: %s", err)
+	}
+}
 //
 //func TestNodeStore(t *testing.T)  {
 //	levelDB, _ := New("test Db")
