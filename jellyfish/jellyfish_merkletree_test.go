@@ -371,7 +371,7 @@ func TestManyVersionsGetProofAndVerifyTreeRoot(t *testing.T)  {
 }
 
 func TestInsertToEmptyTreeLevel(t *testing.T)  {
-	db := NewTreeStore()
+	db := NewTreeStore("statedb")
 	tree := JfMerkleTree{db, nil}
 	key := common.HashValue{}.Random()
 	value := ValueT{[]byte{43, 43, 67, 98}}
@@ -397,7 +397,7 @@ func TestInsertToEmptyTreeLevel(t *testing.T)  {
 
 func TestManyKeysGetProofAndVerifyTreeRootLevel(t *testing.T)  {
 	numKeys := 10000
-	db := NewTreeStore()
+	db := NewTreeStore("statedb")
 	tree := JfMerkleTree{db, nil}
 	var kvs []ValueSetItem
 	for i:=0; i<numKeys; i++ {
@@ -411,7 +411,7 @@ func TestManyKeysGetProofAndVerifyTreeRootLevel(t *testing.T)  {
 		panic(err)
 	}
 	db.Db.Close()
-	db = NewTreeStore()
+	db = NewTreeStore("statedb")
 	tree = JfMerkleTree{db, nil}
 	for _, item := range kvs {
 		proofValue, proof := tree.GetWithProof(item.HashK, 0)
@@ -423,7 +423,7 @@ func TestManyKeysGetProofAndVerifyTreeRootLevel(t *testing.T)  {
 
 func TestManyVersionsGetProofAndVerifyTreeRootLevel(t *testing.T)  {
 	numVersions := 10000
-	db := NewTreeStore()
+	db := NewTreeStore("statedb")
 	tree := JfMerkleTree{db, nil}
 	var kvus []testKVU
 	var roots []common.HashValue

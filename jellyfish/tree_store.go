@@ -15,8 +15,8 @@ type nodeStore struct {
 	NodeType  int
 }
 
-func NewTreeStore() *treeStore {
-	db, _ := storage.New("statedb")
+func NewTreeStore(path string) *treeStore {
+	db, _ := storage.New(path)
 	return &treeStore{Db: db}
 }
 
