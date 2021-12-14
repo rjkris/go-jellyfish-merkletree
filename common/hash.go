@@ -86,8 +86,12 @@ func (s SparseMerkleLeafNode)Hash() HashValue {
 func BytesToHash(b []byte) HashValue {
 	var h HashValue
 	var byteArray [HashLength]byte
-	for i, v := range b {
-		byteArray[i] = v
+	size := HashLength
+	if len(b) < HashLength {
+		size = len(b)
+	}
+	for i:=0; i<size; i++ {
+		byteArray[i] = b[i]
 	}
 	h.SetBytes(byteArray)
 	return h
